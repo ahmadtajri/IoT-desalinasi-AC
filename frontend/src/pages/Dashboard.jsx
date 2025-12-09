@@ -1,37 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import CompartmentCard from '../components/CompartmentCard';
-import SensorDetailCard from '../components/SensorDetailCard';
+import SensorSelectCard from '../components/SensorSelectCard';
 import SensorChart from '../components/SensorChart';
-import sensorService from '../services/sensorService'; // Still needed for DB status
-import { useLogger } from '../context/LoggerContext'; // Import Context
-import { Thermometer, Droplets, Waves, Box, X, AlertTriangle, AlertOctagon } from 'lucide-react';
-import skemaDesalinasi from '../assets/skema-desalinasi.svg';
+import sensorService from '../services/sensorService';
+import { useLogger } from '../context/LoggerContext';
+import { Thermometer, Droplets, AlertTriangle, AlertOctagon, X, CheckCircle, XCircle } from 'lucide-react';
 
 const Dashboard = () => {
-    // 1. Get Realtime Data Stream (UPDATES EVERY 1 SECOND)
-    const { realtimeData } = useLogger();
+    // Get Realtime Data Stream and Sensor Status
+    const { realtimeData, sensorStatus } = useLogger();
 
-    // Local state for compartments (Display data)
-    // Initialize with default/empty structure
-    const [compartments, setCompartments] = useState(
-        Array.from({ length: 6 }, (_, i) => ({
-            id: i + 1,
-            data: {
-                tempAir: 0,
-                humidAir: 0,
-                tempWater: 0
-            }
-        }))
-    );
+    // Selected sensors for each card
+    const [selectedHumidity, setSelectedHumidity] = useState('H1');
+    const [selectedTemperature, setSelectedTemperature] = useState('T1');
 
-    const [selectedCompartment, setSelectedCompartment] = useState('1');
-    const [showSchemaModal, setShowSchemaModal] = useState(false);
     const [dbStatus, setDbStatus] = useState(null);
+    const [showStatusModal, setShowStatusModal] = useState(false);
 
-    // History data for chart (array of objects)
+    // History data for chart
     const [chartData, setChartData] = useState([]);
 
-    // 2. Fetch database status (Check every minute)
+    // Options for dropdown
+    const humidityOptions = Array.from({ length: 6 }, (_, i) => ({
+        value: `H${i + 1}`,
+        label: `Kelembapan (H${i + 1})`
+    }));
+
+    const temperatureOptions = Array.from({ length: 12 }, (_, i) => ({
+        value: `T${i + 1}`,
+        label: `Suhu (T${i + 1})`
+    }));
+
+    // Fetch database status
     useEffect(() => {
         const fetchDbStatus = async () => {
             try {
@@ -42,50 +41,57 @@ const Dashboard = () => {
             }
         };
 
-        fetchDbStatus(); // Initial call
+        fetchDbStatus();
         const interval = setInterval(fetchDbStatus, 60000);
         return () => clearInterval(interval);
     }, []);
 
-    // 3. React instantly to Realtime Data updates
+    // Update chart when realtime data changes
     useEffect(() => {
-        // If no data yet (e.g. first split second), do nothing
-        if (!realtimeData || realtimeData.length === 0) return;
+        if (!realtimeData || !realtimeData.humidity || !realtimeData.temperature) return;
 
-        // A. Update Overview Grid & Detail Cards
-        // realtimeData structure is already compatible: [{ id, data: {...} }, ...]
-        setCompartments(realtimeData);
+        const humidValue = realtimeData.humidity[selectedHumidity];
+        const tempValue = realtimeData.temperature[selectedTemperature];
 
-        // B. Update Chart
-        const targetId = selectedCompartment === 'all' ? 1 : parseInt(selectedCompartment);
-        const latestForTarget = realtimeData.find(d => d.id === targetId);
+        if (humidValue === null && tempValue === null) return;
 
-        if (latestForTarget) {
-            const timeString = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const timeString = new Date().toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
 
-            setChartData(prev => {
-                const newPoint = {
-                    time: timeString,
-                    tempAir: latestForTarget.data.tempAir,
-                    humidAir: latestForTarget.data.humidAir,
-                    tempWater: latestForTarget.data.tempWater
-                };
+        setChartData(prev => {
+            const newPoint = {
+                time: timeString,
+                humidity: humidValue ?? prev[prev.length - 1]?.humidity ?? 0,
+                temperature: tempValue ?? prev[prev.length - 1]?.temperature ?? 0
+            };
 
-                const newHistory = [...prev, newPoint];
-                // Keep last 20 points for smooth scrolling chart
-                if (newHistory.length > 20) return newHistory.slice(newHistory.length - 20);
-                return newHistory;
-            });
-        }
-    }, [realtimeData, selectedCompartment]);
+            const newHistory = [...prev, newPoint];
+            if (newHistory.length > 20) return newHistory.slice(newHistory.length - 20);
+            return newHistory;
+        });
+    }, [realtimeData, selectedHumidity, selectedTemperature]);
 
-    // Clear chart when switching compartment
+    // Clear chart when switching sensors
     useEffect(() => {
         setChartData([]);
-    }, [selectedCompartment]);
+    }, [selectedHumidity, selectedTemperature]);
 
-    // Get currently selected compartment data for Detail View
-    const currentData = compartments.find(c => c.id === parseInt(selectedCompartment))?.data || { tempAir: 0, humidAir: 0, tempWater: 0 };
+    // Get current values
+    const currentHumidityValue = realtimeData?.humidity?.[selectedHumidity] ?? 0;
+    const currentTemperatureValue = realtimeData?.temperature?.[selectedTemperature] ?? 0;
+
+    // Count active sensors
+    const activeHumiditySensors = sensorStatus?.humidity
+        ? Object.values(sensorStatus.humidity).filter(s => s).length
+        : 0;
+    const activeTempSensors = sensorStatus?.temperature
+        ? Object.values(sensorStatus.temperature).filter(s => s).length
+        : 0;
+    const totalActiveSensors = activeHumiditySensors + activeTempSensors;
+    const totalInactiveSensors = 18 - totalActiveSensors;
 
     return (
         <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
@@ -115,154 +121,233 @@ const Dashboard = () => {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800">Pilih Compartment</h2>
-                        <p className="text-gray-500 text-sm mt-1">Pilih compartment untuk melihat detail sensor real-time</p>
+                        <h2 className="text-2xl font-bold text-gray-800">Monitoring Sensor</h2>
+                        <p className="text-gray-500 text-sm mt-1">Pilih sensor individual untuk melihat data real-time</p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        {/* Tombol Skema Desalinasi */}
-                        <button
-                            onClick={() => setShowSchemaModal(true)}
-                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <span>Lihat Skema Desalinasi</span>
-                        </button>
-
-                        {/* Dropdown Compartment */}
-                        <div className="relative min-w-[250px]">
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                <Box size={20} />
+                    {/* Status Indicators - Clickable */}
+                    <div className="flex items-center gap-3">
+                        {/* Live Data indicator */}
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 rounded-xl border border-green-200">
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
                             </div>
-                            <select
-                                value={selectedCompartment}
-                                onChange={(e) => setSelectedCompartment(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 font-medium outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer appearance-none shadow-sm"
-                            >
-                                <option value="all">Tampilkan Semua Overview</option>
-                                {[1, 2, 3, 4, 5, 6].map(num => (
-                                    <option key={num} value={num}>Compartment {num}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
+                            <span className="text-green-700 font-medium text-sm">Live</span>
                         </div>
+
+                        {/* Clickable Sensor Status */}
+                        <button
+                            onClick={() => setShowStatusModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200 hover:from-blue-100 hover:to-cyan-100 transition-all duration-200 cursor-pointer group"
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <CheckCircle size={16} className="text-green-500" />
+                                <span className="text-green-700 font-bold text-sm">{totalActiveSensors}</span>
+                            </div>
+                            <div className="w-px h-4 bg-gray-300"></div>
+                            <div className="flex items-center gap-1.5">
+                                <XCircle size={16} className="text-red-400" />
+                                <span className="text-red-600 font-bold text-sm">{totalInactiveSensors}</span>
+                            </div>
+                            <span className="text-gray-500 text-xs ml-1 group-hover:text-blue-600 transition-colors">Detail →</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Modal Skema Desalinasi */}
-            {showSchemaModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setShowSchemaModal(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Sensor Status Modal */}
+            {showStatusModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+                    onClick={() => setShowStatusModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Modal Header */}
                         <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 flex items-center justify-between">
                             <div className="flex items-center gap-3 text-white">
-                                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
+                                <div className="p-2 bg-white/20 rounded-lg">
+                                    <CheckCircle size={24} />
+                                </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold">Skema Sistem Desalinasi</h2>
-                                    <p className="text-blue-100 text-sm mt-1">Diagram alur proses desalinasi air laut</p>
+                                    <h2 className="text-xl font-bold">Status Semua Sensor</h2>
+                                    <p className="text-blue-100 text-sm mt-1">
+                                        {totalActiveSensors} Aktif • {totalInactiveSensors} Tidak Aktif
+                                    </p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => setShowSchemaModal(false)}
-                                className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                                onClick={() => setShowStatusModal(false)}
+                                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                             >
-                                <X className="w-6 h-6 text-white" />
+                                <X size={24} className="text-white" />
                             </button>
                         </div>
 
                         {/* Modal Content */}
-                        <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                <img
-                                    src={skemaDesalinasi}
-                                    alt="Skema Sistem Desalinasi"
-                                    className="w-full h-auto mx-auto"
-                                />
+                        <div className="p-6 overflow-auto max-h-[calc(90vh-200px)]">
+                            {/* Humidity Sensors */}
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Droplets size={20} className="text-blue-500" />
+                                    <h3 className="font-bold text-gray-800">Sensor Kelembapan (H1-H6)</h3>
+                                    <span className="text-sm text-gray-500 ml-auto">
+                                        {activeHumiditySensors}/6 Aktif
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                                    {Object.entries(sensorStatus?.humidity || {}).map(([key, isActive]) => {
+                                        const value = realtimeData?.humidity?.[key];
+                                        return (
+                                            <div
+                                                key={key}
+                                                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${isActive
+                                                    ? 'bg-green-50 border-green-200'
+                                                    : 'bg-red-50 border-red-200'
+                                                    }`}
+                                            >
+                                                <div className="relative mb-1">
+                                                    {isActive ? (
+                                                        <>
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                                    )}
+                                                </div>
+                                                <span className={`font-bold text-sm ${isActive ? 'text-green-700' : 'text-red-600'}`}>
+                                                    {key}
+                                                </span>
+                                                <span className={`text-lg font-bold mt-1 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+                                                    {isActive && value !== null ? `${value}%` : '--'}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Temperature Sensors */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Thermometer size={20} className="text-orange-500" />
+                                    <h3 className="font-bold text-gray-800">Sensor Suhu (T1-T12)</h3>
+                                    <span className="text-sm text-gray-500 ml-auto">
+                                        {activeTempSensors}/12 Aktif
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                                    {Object.entries(sensorStatus?.temperature || {}).map(([key, isActive]) => {
+                                        const value = realtimeData?.temperature?.[key];
+                                        return (
+                                            <div
+                                                key={key}
+                                                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${isActive
+                                                    ? 'bg-green-50 border-green-200'
+                                                    : 'bg-red-50 border-red-200'
+                                                    }`}
+                                            >
+                                                <div className="relative mb-1">
+                                                    {isActive ? (
+                                                        <>
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                                    )}
+                                                </div>
+                                                <span className={`font-bold text-sm ${isActive ? 'text-green-700' : 'text-red-600'}`}>
+                                                    {key}
+                                                </span>
+                                                <span className={`text-lg font-bold mt-1 ${isActive ? 'text-orange-600' : 'text-gray-400'}`}>
+                                                    {isActive && value !== null ? `${value}°` : '--'}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
-                            <button
-                                onClick={() => setShowSchemaModal(false)}
-                                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
-                            >
-                                Tutup
-                            </button>
+                        {/* Modal Footer with Legend */}
+                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span className="text-sm text-gray-600">Sensor Aktif</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                        <span className="text-sm text-gray-600">Sensor Offline</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowStatusModal(false)}
+                                    className="px-5 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Content Section */}
-            {selectedCompartment === 'all' ? (
-                // Overview Mode (Grid)
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Overview Semua Compartment</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {compartments.map(comp => (
-                            <CompartmentCard key={comp.id} id={comp.id} data={comp.data} />
-                        ))}
-                    </div>
+            {/* Main Content - Two Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Card 1: Kelembapan (H1-H6) */}
+                <SensorSelectCard
+                    title="Kelembapan (Humidity)"
+                    subtitle="Monitoring kelembapan udara"
+                    value={currentHumidityValue}
+                    unit="%"
+                    icon={Droplets}
+                    colorTheme="blue"
+                    options={humidityOptions}
+                    selectedOption={selectedHumidity}
+                    onSelectChange={setSelectedHumidity}
+                    sensorStatus={sensorStatus?.humidity || {}}
+                    max={100}
+                />
+
+                {/* Card 2: Suhu (T1-T12) */}
+                <SensorSelectCard
+                    title="Suhu (Temperature)"
+                    subtitle="Monitoring suhu"
+                    value={currentTemperatureValue}
+                    unit="°C"
+                    icon={Thermometer}
+                    colorTheme="orange"
+                    options={temperatureOptions}
+                    selectedOption={selectedTemperature}
+                    onSelectChange={setSelectedTemperature}
+                    sensorStatus={sensorStatus?.temperature || {}}
+                    max={150}
+                />
+            </div>
+
+            {/* Chart Section */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-800">Grafik Real-time</h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                        Menampilkan data {selectedHumidity} (Kelembapan) dan {selectedTemperature} (Suhu)
+                    </p>
                 </div>
-            ) : (
-                // Detail Mode (The Requested Design)
-                <div className="flex flex-col gap-6">
-                    <div className="order-2 md:order-1 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                        <div className="mb-8">
-                            <h1 className="text-3xl font-bold text-gray-900">Compartment {selectedCompartment}</h1>
-                            <p className="text-gray-500 mt-2">Monitoring 3 sensor secara real-time</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Suhu Udara - Orange */}
-                            <SensorDetailCard
-                                title="Suhu Udara"
-                                subtitle="Air Temperature"
-                                value={currentData.tempAir}
-                                unit="°C"
-                                icon={Thermometer}
-                                colorTheme="orange"
-                                max={50}
-                            />
-
-                            {/* Kelembapan Udara - Blue */}
-                            <SensorDetailCard
-                                title="Kelembapan Udara"
-                                subtitle="Air Humidity"
-                                value={currentData.humidAir}
-                                unit="%"
-                                icon={Droplets}
-                                colorTheme="blue"
-                                max={100}
-                            />
-
-                            {/* Suhu Air - Green/Mint */}
-                            <SensorDetailCard
-                                title="Suhu Air"
-                                subtitle="Water Temperature"
-                                value={currentData.tempWater}
-                                unit="°C"
-                                icon={Waves}
-                                colorTheme="green"
-                                max={50}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Chart Section */}
-                    <div className="order-1 md:order-2">
-                        <SensorChart data={chartData} />
-                    </div>
-                </div>
-            )}
+                <SensorChart
+                    data={chartData}
+                    dataKeys={[
+                        { key: 'humidity', name: `Kelembapan (${selectedHumidity})`, color: '#3b82f6' },
+                        { key: 'temperature', name: `Suhu (${selectedTemperature})`, color: '#f97316' }
+                    ]}
+                />
+            </div>
         </div>
     );
 };

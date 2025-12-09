@@ -1,88 +1,85 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const SensorChart = ({ data }) => {
+const SensorChart = ({ data, dataKeys }) => {
+    // Default dataKeys if not provided (for backward compatibility)
+    const defaultDataKeys = [
+        { key: 'humidity', name: 'Kelembapan (%)', color: '#3b82f6' },
+        { key: 'temperature', name: 'Suhu (°C)', color: '#f97316' }
+    ];
+
+    const keysToRender = dataKeys || defaultDataKeys;
+
     return (
-        <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100">
-            <div className="mb-4 md:mb-6">
-                <h3 className="text-lg md:text-xl font-bold text-gray-800">Grafik Real-time</h3>
-                <p className="text-gray-500 text-xs md:text-sm">Monitoring pergerakan suhu dan kelembapan</p>
-            </div>
-
-            <div className="h-[250px] md:h-[400px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                        data={data}
-                        margin={{
-                            top: 5,
-                            right: 10,
-                            left: -20,
-                            bottom: 0,
+        <div className="h-[300px] md:h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                    data={data}
+                    margin={{
+                        top: 5,
+                        right: 20,
+                        left: 0,
+                        bottom: 0,
+                    }}
+                >
+                    <defs>
+                        {keysToRender.map((item, index) => (
+                            <linearGradient
+                                key={`gradient-${index}`}
+                                id={`gradient-${item.key}`}
+                                x1="0" y1="0" x2="0" y2="1"
+                            >
+                                <stop offset="0%" stopColor={item.color} stopOpacity={0.8} />
+                                <stop offset="100%" stopColor={item.color} stopOpacity={0.3} />
+                            </linearGradient>
+                        ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                        dataKey="time"
+                        stroke="#9ca3af"
+                        fontSize={11}
+                        tickMargin={10}
+                        tick={{ fontSize: 11, fill: '#6b7280' }}
+                    />
+                    <YAxis
+                        stroke="#9ca3af"
+                        fontSize={11}
+                        tick={{ fontSize: 11, fill: '#6b7280' }}
+                    />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: '#fff',
+                            borderRadius: '12px',
+                            border: 'none',
+                            boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                            fontSize: '13px',
+                            padding: '12px 16px'
                         }}
-                    >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis
-                            dataKey="time"
-                            stroke="#9ca3af"
-                            fontSize={10}
-                            tickMargin={10}
-                            tick={{ fontSize: 10 }}
-                        />
-                        <YAxis
-                            stroke="#9ca3af"
-                            fontSize={10}
-                            tick={{ fontSize: 10 }}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#fff',
-                                borderRadius: '12px',
-                                border: 'none',
-                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                                fontSize: '12px'
-                            }}
-                        />
-                        <Legend
-                            wrapperStyle={{ paddingTop: '10px', fontSize: '12px', marginLeft: '20px' }}
-                            iconSize={10}
-                        />
+                        labelStyle={{ fontWeight: 'bold', marginBottom: '8px' }}
+                    />
+                    <Legend
+                        wrapperStyle={{ paddingTop: '20px', fontSize: '13px' }}
+                        iconSize={12}
+                        iconType="circle"
+                    />
 
-                        {/* Suhu Udara - Orange */}
+                    {/* Render dynamic lines based on dataKeys */}
+                    {keysToRender.map((item, index) => (
                         <Line
+                            key={item.key}
                             type="monotone"
-                            dataKey="tempAir"
-                            name="Suhu Udara (°C)"
-                            stroke="#f97316"
-                            strokeWidth={2}
+                            dataKey={item.key}
+                            name={item.name}
+                            stroke={item.color}
+                            strokeWidth={3}
                             dot={false}
-                            activeDot={{ r: 6 }}
+                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
                             isAnimationActive={false}
                         />
-
-                        {/* Kelembapan - Blue */}
-                        <Line
-                            type="monotone"
-                            dataKey="humidAir"
-                            name="Kelembapan (%)"
-                            stroke="#3b82f6"
-                            strokeWidth={2}
-                            dot={false}
-                            isAnimationActive={false}
-                        />
-
-                        {/* Suhu Air - Green */}
-                        <Line
-                            type="monotone"
-                            dataKey="tempWater"
-                            name="Suhu Air (°C)"
-                            stroke="#10b981"
-                            strokeWidth={2}
-                            dot={false}
-                            isAnimationActive={false}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
         </div>
     );
 };

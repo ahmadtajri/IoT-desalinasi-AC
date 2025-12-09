@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ChevronLeft, ChevronRight, Activity, X } from 'lucide-react';
+import { LayoutDashboard, FileText, ChevronLeft, ChevronRight, Activity, X, FileImage } from 'lucide-react';
 import logoIcon from '../assets/icons/icon-x192.png';
+import skemaDesalinasi from '../assets/skema-desalinasi.svg';
 import useBackendStatus from '../hooks/useBackendStatus';
 
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [showSchemaModal, setShowSchemaModal] = useState(false);
     const location = useLocation();
-    const { isOnline, isChecking } = useBackendStatus(5000); // Check every 5 seconds
+    const { isOnline, isChecking } = useBackendStatus(5000);
 
     const isActive = (path) => location.pathname === path;
 
@@ -22,6 +24,13 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
     const statusSubtext = isOnline ? 'Connected' : 'Not Running';
 
     const handleLinkClick = () => {
+        if (window.innerWidth < 768) {
+            setIsMobileOpen(false);
+        }
+    };
+
+    const handleSchemaClick = () => {
+        setShowSchemaModal(true);
         if (window.innerWidth < 768) {
             setIsMobileOpen(false);
         }
@@ -109,10 +118,35 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                                 </Link>
                             </li>
                         ))}
+
+                        {/* Skema Desalinasi Button */}
+                        <li>
+                            <button
+                                onClick={handleSchemaClick}
+                                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative text-gray-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-600 ${isCollapsed ? 'md:justify-center' : ''}`}
+                            >
+                                <FileImage
+                                    size={22}
+                                    className="shrink-0 text-gray-500 group-hover:text-blue-600"
+                                />
+
+                                <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${isCollapsed ? 'md:w-0 md:opacity-0' : 'w-auto opacity-100'}`}>
+                                    Skema Desalinasi
+                                </span>
+
+                                {/* Tooltip for collapsed mode */}
+                                {isCollapsed && (
+                                    <div className="hidden md:block absolute left-full ml-4 px-3 py-1.5 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20 shadow-xl">
+                                        Skema Desalinasi
+                                        <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-transparent border-r-gray-800"></div>
+                                    </div>
+                                )}
+                            </button>
+                        </li>
                     </ul>
                 </nav>
 
-                {/* Footer Status - Dynamic based on backend connection */}
+                {/* Footer Status */}
                 <div className="p-4 border-t border-gray-100 mt-auto">
                     <div className={`bg-gray-50 rounded-xl transition-all duration-300 ${isCollapsed ? 'md:p-3 md:flex md:justify-center' : 'p-4'}`}>
                         <div className={`${isCollapsed ? 'md:hidden' : 'block'}`}>
@@ -148,6 +182,59 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Schema Modal */}
+            {showSchemaModal && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+                    onClick={() => setShowSchemaModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-white">
+                                <div className="p-2 bg-white/20 rounded-lg">
+                                    <FileImage size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold">Skema Sistem Desalinasi</h2>
+                                    <p className="text-blue-100 text-sm mt-1">Diagram alur proses desalinasi air laut</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSchemaModal(false)}
+                                className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                            >
+                                <X className="w-6 h-6 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-6 overflow-auto max-h-[calc(90vh-180px)]">
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                <img
+                                    src={skemaDesalinasi}
+                                    alt="Skema Sistem Desalinasi"
+                                    className="w-full h-auto mx-auto"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+                            <button
+                                onClick={() => setShowSchemaModal(false)}
+                                className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
