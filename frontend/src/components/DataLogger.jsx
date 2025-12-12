@@ -7,7 +7,7 @@ const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging }) => {
 
     const intervals = [
         { value: '5', label: '5 Detik' },
-        { value: '10', label: '10 Detik' },
+        { value: '30', label: '30 Detik' },
         { value: '60', label: '1 Menit' }
     ];
 
@@ -34,8 +34,8 @@ const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging }) => {
                 <button
                     onClick={onToggleLogging}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isLogging
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                 >
                     {isLogging ? (
@@ -64,8 +64,8 @@ const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging }) => {
                                 onClick={() => handleIntervalChange(int.value)}
                                 disabled={isLogging}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${interval === int.value
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     } ${isLogging ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {int.label}

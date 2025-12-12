@@ -16,7 +16,6 @@ const DataService = {
             });
         }
 
-        // Original database code (disabled)
         const SensorData = require('../models/SensorData');
         return await SensorData.findAll({
             order: [['timestamp', 'DESC']],
@@ -24,12 +23,12 @@ const DataService = {
         });
     },
 
-    async getDataByCompartment(compartmentId, limit = 100) {
-        console.log('[DataService] getDataByCompartment called:', compartmentId);
+    async getDataBySensorId(sensorId, limit = 100) {
+        console.log('[DataService] getDataBySensorId called:', sensorId);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.findAll({
-                where: { compartment_id: compartmentId },
+                where: { sensor_id: sensorId },
                 order: [['timestamp', 'DESC']],
                 limit: parseInt(limit)
             });
@@ -37,7 +36,26 @@ const DataService = {
 
         const SensorData = require('../models/SensorData');
         return await SensorData.findAll({
-            where: { compartment_id: compartmentId },
+            where: { sensor_id: sensorId },
+            order: [['timestamp', 'DESC']],
+            limit: parseInt(limit)
+        });
+    },
+
+    async getDataBySensorType(sensorType, limit = 100) {
+        console.log('[DataService] getDataBySensorType called:', sensorType);
+
+        if (USE_MOCK_DATA) {
+            return await mockDataStore.findAll({
+                where: { sensor_type: sensorType },
+                order: [['timestamp', 'DESC']],
+                limit: parseInt(limit)
+            });
+        }
+
+        const SensorData = require('../models/SensorData');
+        return await SensorData.findAll({
+            where: { sensor_type: sensorType },
             order: [['timestamp', 'DESC']],
             limit: parseInt(limit)
         });
@@ -47,7 +65,6 @@ const DataService = {
         console.log('[DataService] getDataByDateRange called');
 
         if (USE_MOCK_DATA) {
-            // Simple date range filter for mock data
             const allData = await mockDataStore.findAll({
                 order: [['timestamp', 'DESC']]
             });
@@ -112,46 +129,60 @@ const DataService = {
         });
     },
 
-    async deleteDataByCompartment(compartmentId) {
-        console.log('[DataService] deleteDataByCompartment called with ID:', compartmentId);
+    async deleteDataBySensorId(sensorId) {
+        console.log('[DataService] deleteDataBySensorId called with ID:', sensorId);
 
         if (USE_MOCK_DATA) {
             try {
-                // First, check how many records exist for this compartment
-                const count = await mockDataStore.count({
-                    where: { compartment_id: compartmentId }
-                });
-                console.log(`[DataService] Found ${count} records for compartment ${compartmentId}`);
-
-                // Perform the deletion
                 const deleted = await mockDataStore.destroy({
-                    where: { compartment_id: compartmentId }
+                    where: { sensor_id: sensorId }
                 });
-
-                console.log(`[DataService] Successfully deleted ${deleted} records for compartment ${compartmentId}`);
+                console.log(`[DataService] Successfully deleted ${deleted} records for sensor ${sensorId}`);
                 return deleted;
             } catch (error) {
-                console.error('[DataService] Error in deleteDataByCompartment:', error);
+                console.error('[DataService] Error in deleteDataBySensorId:', error);
                 throw error;
             }
         }
 
-        // Original database code
         const SensorData = require('../models/SensorData');
         try {
-            const count = await SensorData.count({
-                where: { compartment_id: compartmentId }
-            });
-            console.log(`[DataService] Found ${count} records for compartment ${compartmentId}`);
-
             const deleted = await SensorData.destroy({
-                where: { compartment_id: compartmentId }
+                where: { sensor_id: sensorId }
             });
-
-            console.log(`[DataService] Successfully deleted ${deleted} records for compartment ${compartmentId}`);
+            console.log(`[DataService] Successfully deleted ${deleted} records for sensor ${sensorId}`);
             return deleted;
         } catch (error) {
-            console.error('[DataService] Error in deleteDataByCompartment:', error);
+            console.error('[DataService] Error in deleteDataBySensorId:', error);
+            throw error;
+        }
+    },
+
+    async deleteDataBySensorType(sensorType) {
+        console.log('[DataService] deleteDataBySensorType called with type:', sensorType);
+
+        if (USE_MOCK_DATA) {
+            try {
+                const deleted = await mockDataStore.destroy({
+                    where: { sensor_type: sensorType }
+                });
+                console.log(`[DataService] Successfully deleted ${deleted} records for type ${sensorType}`);
+                return deleted;
+            } catch (error) {
+                console.error('[DataService] Error in deleteDataBySensorType:', error);
+                throw error;
+            }
+        }
+
+        const SensorData = require('../models/SensorData');
+        try {
+            const deleted = await SensorData.destroy({
+                where: { sensor_type: sensorType }
+            });
+            console.log(`[DataService] Successfully deleted ${deleted} records for type ${sensorType}`);
+            return deleted;
+        } catch (error) {
+            console.error('[DataService] Error in deleteDataBySensorType:', error);
             throw error;
         }
     },
@@ -193,7 +224,6 @@ const DataService = {
         console.log('[DataService] getDatabaseStatus called');
 
         if (USE_MOCK_DATA) {
-            // For mock data, return simple status
             const stats = mockDataStore.getStats();
             const totalRecords = stats.totalRecords;
 
@@ -213,7 +243,6 @@ const DataService = {
             };
         }
 
-        // Call stored procedure for real database
         const sequelize = require('../config/database');
         try {
             const [results] = await sequelize.query('CALL check_database_status()');
@@ -235,7 +264,6 @@ const DataService = {
         } catch (error) {
             console.warn('[DataService] Stored Procedure failed, falling back to manual query:', error.message);
 
-            // Fallback: Calculate manually
             try {
                 const SensorData = require('../models/SensorData');
                 const count = await SensorData.count();
@@ -255,7 +283,7 @@ const DataService = {
 
                 return {
                     total_records: count,
-                    table_size_mb: 0, // Cannot easily get in fallback
+                    table_size_mb: 0,
                     database_size_mb: 0,
                     status: status,
                     message: message,

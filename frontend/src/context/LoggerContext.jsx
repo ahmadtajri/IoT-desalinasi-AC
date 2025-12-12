@@ -10,11 +10,13 @@ const LoggerContext = createContext({
     isRealtimeOnly: true,
     realtimeData: {
         humidity: {},
-        temperature: {}
+        temperature: {},
+        waterLevel: {}
     },
     sensorStatus: {
         humidity: {},
-        temperature: {}
+        temperature: {},
+        waterLevel: {}
     }
 });
 
@@ -29,26 +31,23 @@ export const LoggerProvider = ({ children }) => {
     // Dashboard Data State - NEW STRUCTURE
     const [realtimeData, setRealtimeData] = useState({
         humidity: {},
-        temperature: {}
+        temperature: {},
+        waterLevel: {}
     });
 
     // Sensor Status - Track which sensors are active/inactive
     // true = active (receiving data), false = inactive (no data/error)
     const [sensorStatus, setSensorStatus] = useState({
-        humidity: {
-            H1: true, H2: true, H3: true, H4: false, H5: false, H6: false
-        },
-        temperature: {
-            T1: true, T2: true, T3: true, T4: true,
-            T5: false, T6: false, T7: false, T8: false,
-            T9: false, T10: false, T11: false, T12: false
-        }
+        humidity: {},
+        temperature: {},
+        waterLevel: {}
     });
 
     // Last update timestamps for detecting inactive sensors
     const lastUpdateRef = useRef({
         humidity: {},
-        temperature: {}
+        temperature: {},
+        waterLevel: {}
     });
 
     // 1. SYNC STATUS WITH BACKEND ON MOUNT & PERIODICALLY
@@ -77,15 +76,15 @@ export const LoggerProvider = ({ children }) => {
         const generateData = () => {
             const now = Date.now();
 
-            // Generate Humidity sensors H1-H6
-            // Simulate: H1-H3 always active, H4-H6 randomly active/inactive
+            // Generate Humidity sensors H1-H7
+            // Simulate: H1-H4 always active, H5-H7 randomly active/inactive
             const humidity = {};
             const humidityStatus = {};
 
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 7; i++) {
                 const key = `H${i}`;
-                // H1-H3 always active, H4-H6 have 70% chance of being active
-                const isActive = i <= 3 ? true : Math.random() > 0.3;
+                // H1-H4 always active, H5-H7 have 70% chance of being active
+                const isActive = i <= 4 ? true : Math.random() > 0.3;
 
                 humidityStatus[key] = isActive;
 
@@ -98,28 +97,43 @@ export const LoggerProvider = ({ children }) => {
                 }
             }
 
-            // Generate Temperature sensors T1-T12
-            // Simulate: T1-T4 always active, T5-T12 randomly active/inactive
+            // Generate Temperature sensors T1-T15
+            // Simulate: T1-T8 always active, T9-T15 randomly active/inactive
             const temperature = {};
             const temperatureStatus = {};
 
-            for (let i = 1; i <= 12; i++) {
+            for (let i = 1; i <= 15; i++) {
                 const key = `T${i}`;
-                // T1-T4 always active, T5-T12 have 60% chance of being active
-                const isActive = i <= 4 ? true : Math.random() > 0.4;
+                // T1-T8 always active, T9-T15 have 60% chance of being active
+                const isActive = i <= 8 ? true : Math.random() > 0.4;
 
                 temperatureStatus[key] = isActive;
 
                 if (isActive) {
-                    temperature[key] = parseFloat((20 + Math.random() * 130).toFixed(1)); // 20-150°C
+                    // Max 70 degrees
+                    temperature[key] = parseFloat((20 + Math.random() * 50).toFixed(1)); // 20-70°C
                     lastUpdateRef.current.temperature[key] = now;
                 } else {
                     temperature[key] = null;
                 }
             }
 
-            setRealtimeData({ humidity, temperature });
-            setSensorStatus({ humidity: humidityStatus, temperature: temperatureStatus });
+            // Generate Water Level sensor WL1
+            const waterLevel = {};
+            const waterLevelStatus = {};
+            const wlKey = 'WL1';
+            const isWlActive = true; // Always active for now
+
+            waterLevelStatus[wlKey] = isWlActive;
+            if (isWlActive) {
+                waterLevel[wlKey] = parseFloat((10 + Math.random() * 90).toFixed(1)); // 10-100%
+                lastUpdateRef.current.waterLevel[wlKey] = now;
+            } else {
+                waterLevel[wlKey] = null;
+            }
+
+            setRealtimeData({ humidity, temperature, waterLevel });
+            setSensorStatus({ humidity: humidityStatus, temperature: temperatureStatus, waterLevel: waterLevelStatus });
         };
 
         generateData();
@@ -128,14 +142,20 @@ export const LoggerProvider = ({ children }) => {
     }, []);
 
     // 3. CONTROLS (Call Backend APIs)
-    const toggleLogging = async () => {
+    const toggleLogging = async (sensorConfig = null) => {
         try {
             if (isLogging) {
                 await sensorService.stopLogger();
                 setIsLogging(false);
             } else {
-                await sensorService.configLogger(logInterval);
-                await sensorService.startLogger();
+                // Configure with sensor types if provided
+                const config = sensorConfig || {
+                    humidity: true,
+                    temperature: true,
+                    waterLevel: true
+                };
+                await sensorService.configLogger(logInterval, config);
+                await sensorService.startLogger(config);
                 setIsLogging(true);
                 setLogCount(0);
             }

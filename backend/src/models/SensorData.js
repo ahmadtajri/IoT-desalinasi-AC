@@ -7,33 +7,46 @@ const SensorData = sequelize.define('SensorData', {
         primaryKey: true,
         autoIncrement: true
     },
-    compartment_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+    sensor_id: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        comment: 'Sensor ID (H1-H7, T1-T15, WL1)'
     },
-    temperature_air: {
-        type: DataTypes.FLOAT,
-        allowNull: true
+    sensor_type: {
+        type: DataTypes.ENUM('humidity', 'temperature', 'waterLevel'),
+        allowNull: false,
+        comment: 'Type of sensor'
     },
-    humidity_air: {
+    value: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: false,
+        comment: 'Sensor reading value'
     },
-    temperature_water: {
-        type: DataTypes.FLOAT,
-        allowNull: true
+    unit: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        defaultValue: '%',
+        comment: 'Unit of measurement (%, °C)'
+    },
+    status: {
+        type: DataTypes.ENUM('active', 'inactive'),
+        allowNull: false,
+        defaultValue: 'active',
+        comment: 'Sensor status at time of reading'
     },
     interval: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: true,
+        comment: 'Logging interval in seconds (5, 30, 60)'
     },
     timestamp: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
+        defaultValue: DataTypes.NOW,
+        comment: 'Time of reading'
     }
 }, {
     tableName: 'sensor_data',
-    timestamps: false // We use our own 'timestamp' column
+    timestamps: false
 });
 
 module.exports = SensorData;

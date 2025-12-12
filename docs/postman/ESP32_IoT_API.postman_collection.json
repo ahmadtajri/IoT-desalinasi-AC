@@ -1,8 +1,8 @@
 {
     "info": {
-        "_postman_id": "esp32-iot-data-logger-v15",
-        "name": "ESP32 IoT Data Logger API",
-        "description": "API Collection untuk ESP32 IoT Data Logger - Monitoring dan logging data sensor desalinasi dengan 6 compartment",
+        "_postman_id": "esp32-iot-data-logger-v20",
+        "name": "ESP32 IoT Desalinasi API v2.0",
+        "description": "API Collection untuk ESP32 IoT Data Logger - Monitoring dan logging data sensor desalinasi\n\nSensor Configuration:\n- Humidity: H1-H7 (7 sensors)\n- Temperature: T1-T15 (15 sensors)\n- Water Level: WL1 (1 sensor)\n- Total: 23 sensors",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -24,7 +24,7 @@
                                 "status"
                             ]
                         },
-                        "description": "Mengecek status logger background (apakah sedang berjalan, interval, log counter)."
+                        "description": "Mengecek status logger background (apakah sedang berjalan, interval, log counter, enabled sensor types)."
                     },
                     "response": []
                 },
@@ -32,7 +32,17 @@
                     "name": "POST Start Logger",
                     "request": {
                         "method": "POST",
-                        "header": [],
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"enableHumidity\": true,\n    \"enableTemperature\": true,\n    \"enableWaterLevel\": true\n}"
+                        },
                         "url": {
                             "raw": "{{api_url}}/logger/start",
                             "host": [
@@ -43,7 +53,7 @@
                                 "start"
                             ]
                         },
-                        "description": "Menyalakan logger background di server."
+                        "description": "Menyalakan logger background di server. Dapat mengatur sensor mana yang akan direkam."
                     },
                     "response": []
                 },
@@ -79,7 +89,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"interval\": 5000\n}"
+                            "raw": "{\n    \"interval\": 5000,\n    \"enableHumidity\": true,\n    \"enableTemperature\": true,\n    \"enableWaterLevel\": true\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/logger/config",
@@ -91,7 +101,7 @@
                                 "config"
                             ]
                         },
-                        "description": "Mengubah interval logger background (dalam milidetik)."
+                        "description": "Mengubah konfigurasi logger:\n- interval: Dalam milidetik (5000, 30000, 60000)\n- enableHumidity: true/false\n- enableTemperature: true/false\n- enableWaterLevel: true/false"
                     },
                     "response": []
                 }
@@ -166,12 +176,12 @@
                     "response": []
                 },
                 {
-                    "name": "GET Sensors by Compartment",
+                    "name": "GET Sensors by Sensor ID",
                     "request": {
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{api_url}}/sensors?compartment=1",
+                            "raw": "{{api_url}}/sensors?sensorId=H1",
                             "host": [
                                 "{{api_url}}"
                             ],
@@ -180,13 +190,38 @@
                             ],
                             "query": [
                                 {
-                                    "key": "compartment",
-                                    "value": "1",
-                                    "description": "Filter data berdasarkan compartment ID (1-6)"
+                                    "key": "sensorId",
+                                    "value": "H1",
+                                    "description": "Filter data berdasarkan sensor ID (H1-H7, T1-T15, WL1)"
                                 }
                             ]
                         },
-                        "description": "Mendapatkan data sensor dari compartment tertentu (1-6)"
+                        "description": "Mendapatkan data dari sensor tertentu (H1-H7, T1-T15, WL1)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Sensors by Type",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/sensors?sensorType=humidity",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "sensors"
+                            ],
+                            "query": [
+                                {
+                                    "key": "sensorType",
+                                    "value": "humidity",
+                                    "description": "Filter data berdasarkan tipe sensor (humidity, temperature, waterLevel)"
+                                }
+                            ]
+                        },
+                        "description": "Mendapatkan data sensor berdasarkan tipe (humidity, temperature, waterLevel)"
                     },
                     "response": []
                 },
@@ -196,7 +231,7 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{api_url}}/sensors?startDate=2025-11-30T00:00:00Z&endDate=2025-11-30T23:59:59Z",
+                            "raw": "{{api_url}}/sensors?startDate=2025-12-01T00:00:00Z&endDate=2025-12-31T23:59:59Z",
                             "host": [
                                 "{{api_url}}"
                             ],
@@ -206,12 +241,12 @@
                             "query": [
                                 {
                                     "key": "startDate",
-                                    "value": "2025-11-30T00:00:00Z",
+                                    "value": "2025-12-01T00:00:00Z",
                                     "description": "Tanggal mulai (ISO 8601 format)"
                                 },
                                 {
                                     "key": "endDate",
-                                    "value": "2025-11-30T23:59:59Z",
+                                    "value": "2025-12-31T23:59:59Z",
                                     "description": "Tanggal akhir (ISO 8601 format)"
                                 }
                             ]
@@ -240,10 +275,28 @@
                             "listen": "prerequest",
                             "script": {
                                 "exec": [
-                                    "pm.environment.set(\"random_compartment\", Math.floor(Math.random() * 6) + 1);",
-                                    "pm.environment.set(\"random_temp_air\", (25 + Math.random() * 5).toFixed(1));",
-                                    "pm.environment.set(\"random_humidity\", (60 + Math.random() * 10).toFixed(1));",
-                                    "pm.environment.set(\"random_temp_water\", (20 + Math.random() * 5).toFixed(1));"
+                                    "const sensorTypes = ['humidity', 'temperature', 'waterLevel'];",
+                                    "const type = sensorTypes[Math.floor(Math.random() * 3)];",
+                                    "let sensorId, unit, value;",
+                                    "",
+                                    "if (type === 'humidity') {",
+                                    "    sensorId = 'H' + (Math.floor(Math.random() * 7) + 1);",
+                                    "    value = (50 + Math.random() * 40).toFixed(1);",
+                                    "    unit = '%';",
+                                    "} else if (type === 'temperature') {",
+                                    "    sensorId = 'T' + (Math.floor(Math.random() * 15) + 1);",
+                                    "    value = (20 + Math.random() * 50).toFixed(1);",
+                                    "    unit = '°C';",
+                                    "} else {",
+                                    "    sensorId = 'WL1';",
+                                    "    value = (10 + Math.random() * 90).toFixed(1);",
+                                    "    unit = '%';",
+                                    "}",
+                                    "",
+                                    "pm.environment.set('random_sensor_id', sensorId);",
+                                    "pm.environment.set('random_sensor_type', type);",
+                                    "pm.environment.set('random_value', value);",
+                                    "pm.environment.set('random_unit', unit);"
                                 ],
                                 "type": "text/javascript"
                             }
@@ -260,7 +313,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"compartment_id\": {{random_compartment}},\n  \"temperature_air\": {{random_temp_air}},\n  \"humidity_air\": {{random_humidity}},\n  \"temperature_water\": {{random_temp_water}}\n}"
+                            "raw": "{\n  \"sensor_id\": \"{{random_sensor_id}}\",\n  \"sensor_type\": \"{{random_sensor_type}}\",\n  \"value\": {{random_value}},\n  \"unit\": \"{{random_unit}}\",\n  \"status\": \"active\",\n  \"interval\": 5\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/sensors",
@@ -276,7 +329,7 @@
                     "response": []
                 },
                 {
-                    "name": "DELETE Single Sensor",
+                    "name": "DELETE Single Record",
                     "request": {
                         "method": "DELETE",
                         "header": [],
@@ -290,7 +343,47 @@
                                 "{{last_created_id}}"
                             ]
                         },
-                        "description": "Menghapus satu data sensor berdasarkan ID."
+                        "description": "Menghapus satu record data sensor berdasarkan ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE by Sensor ID",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/sensors/sensor/H1",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "sensors",
+                                "sensor",
+                                "H1"
+                            ]
+                        },
+                        "description": "Menghapus semua data dari sensor tertentu (contoh: H1)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE by Sensor Type",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/sensors/type/humidity",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "sensors",
+                                "type",
+                                "humidity"
+                            ]
+                        },
+                        "description": "Menghapus semua data berdasarkan tipe sensor (humidity, temperature, waterLevel)."
                     },
                     "response": []
                 },
@@ -336,6 +429,31 @@
             "description": "Endpoint untuk operasi CRUD data sensor"
         },
         {
+            "name": "Database Status",
+            "item": [
+                {
+                    "name": "GET Database Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/database/status",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "database",
+                                "status"
+                            ]
+                        },
+                        "description": "Mengecek status database (total records, ukuran, warnings)."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Status dan monitoring database"
+        },
+        {
             "name": "Error Handling Tests",
             "item": [
                 {
@@ -351,7 +469,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"compartment_id\": 1,\n  \"temperature_air\": 27.5\n}"
+                            "raw": "{\n  \"sensor_id\": \"H1\"\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/sensors",
@@ -382,6 +500,26 @@
                             ]
                         },
                         "description": "Test error handling ketika menghapus data yang tidak ada"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE Invalid Sensor Type",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/sensors/type/invalid",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "sensors",
+                                "type",
+                                "invalid"
+                            ]
+                        },
+                        "description": "Test error handling ketika menghapus dengan tipe sensor tidak valid"
                     },
                     "response": []
                 }

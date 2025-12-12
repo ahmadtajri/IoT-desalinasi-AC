@@ -12,7 +12,8 @@ const SensorSelectCard = ({
     selectedOption,
     onSelectChange,
     sensorStatus = {},
-    max = 100
+    max = 100,
+    showDropdown = true
 }) => {
     // Color configurations
     const themes = {
@@ -39,6 +40,18 @@ const SensorSelectCard = ({
             selectBg: 'bg-white',
             selectBorder: 'border-orange-200 focus:ring-orange-300',
             headerBg: 'bg-gradient-to-r from-orange-500 to-red-500'
+        },
+        cyan: {
+            bg: 'bg-gradient-to-br from-cyan-50 to-blue-50',
+            border: 'border-cyan-200',
+            text: 'text-cyan-600',
+            iconBg: 'bg-cyan-100',
+            barBg: 'bg-cyan-100',
+            barFill: 'bg-gradient-to-r from-cyan-400 to-blue-500',
+            valueColor: 'text-cyan-700',
+            selectBg: 'bg-white',
+            selectBorder: 'border-cyan-200 focus:ring-cyan-300',
+            headerBg: 'bg-gradient-to-r from-cyan-500 to-blue-500'
         }
     };
 
@@ -66,38 +79,40 @@ const SensorSelectCard = ({
             {/* Card Body */}
             <div className="p-6">
                 {/* Sensor Selection Dropdown */}
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">
-                        Pilih Sensor
-                    </label>
-                    <div className="relative">
-                        <select
-                            value={selectedOption}
-                            onChange={(e) => onSelectChange(e.target.value)}
-                            className={`w-full px-4 py-3 pl-10 ${theme.selectBg} border ${theme.selectBorder} rounded-xl text-gray-700 font-medium outline-none focus:ring-2 cursor-pointer appearance-none shadow-sm transition-all duration-200`}
-                        >
-                            {options.map(opt => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
-                        {/* Status indicator on select */}
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                            {isCurrentSensorActive ? (
-                                <div className="relative">
-                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
-                                </div>
-                            ) : (
-                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            )}
-                        </div>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                            <ChevronDown size={20} />
+                {showDropdown && (
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-600 mb-2">
+                            Pilih Sensor
+                        </label>
+                        <div className="relative">
+                            <select
+                                value={selectedOption}
+                                onChange={(e) => onSelectChange(e.target.value)}
+                                className={`w-full px-4 py-3 pl-10 ${theme.selectBg} border ${theme.selectBorder} rounded-xl text-gray-700 font-medium outline-none focus:ring-2 cursor-pointer appearance-none shadow-sm transition-all duration-200`}
+                            >
+                                {options.map(opt => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {/* Status indicator on select */}
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                {isCurrentSensorActive ? (
+                                    <div className="relative">
+                                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
+                                    </div>
+                                ) : (
+                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                )}
+                            </div>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <ChevronDown size={20} />
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Value Display */}
                 <div className="text-center mb-6">

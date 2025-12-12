@@ -6,6 +6,16 @@ const sensorService = {
         return response.data;
     },
 
+    async getBySensorId(sensorId, limit = 100) {
+        const response = await api.get('/sensors', { params: { sensorId, limit } });
+        return response.data;
+    },
+
+    async getBySensorType(sensorType, limit = 100) {
+        const response = await api.get('/sensors', { params: { sensorType, limit } });
+        return response.data;
+    },
+
     async create(sensorData) {
         const response = await api.post('/sensors', sensorData);
         return response.data;
@@ -21,8 +31,13 @@ const sensorService = {
         return response.data;
     },
 
-    async deleteByCompartment(compartmentId) {
-        const response = await api.delete(`/sensors/compartment/${compartmentId}`);
+    async deleteBySensorId(sensorId) {
+        const response = await api.delete(`/sensors/sensor/${sensorId}`);
+        return response.data;
+    },
+
+    async deleteBySensorType(sensorType) {
+        const response = await api.delete(`/sensors/type/${sensorType}`);
         return response.data;
     },
 
@@ -30,7 +45,6 @@ const sensorService = {
         const response = await api.delete(`/sensors/interval/${interval}`);
         return response.data;
     },
-
 
     async getDatabaseStatus() {
         const response = await api.get('/database/status');
@@ -43,8 +57,12 @@ const sensorService = {
         return response.data;
     },
 
-    async startLogger() {
-        const response = await api.post('/logger/start');
+    async startLogger(sensorConfig = {}) {
+        const response = await api.post('/logger/start', {
+            enableHumidity: sensorConfig.humidity !== false,
+            enableTemperature: sensorConfig.temperature !== false,
+            enableWaterLevel: sensorConfig.waterLevel !== false
+        });
         return response.data;
     },
 
@@ -53,8 +71,14 @@ const sensorService = {
         return response.data;
     },
 
-    async configLogger(interval) {
-        const response = await api.post('/logger/config', { interval });
+    async configLogger(interval, sensorConfig = null) {
+        const config = { interval };
+        if (sensorConfig) {
+            config.enableHumidity = sensorConfig.humidity !== false;
+            config.enableTemperature = sensorConfig.temperature !== false;
+            config.enableWaterLevel = sensorConfig.waterLevel !== false;
+        }
+        const response = await api.post('/logger/config', config);
         return response.data;
     },
 
@@ -65,15 +89,16 @@ const sensorService = {
             return false;
         }
 
-        const headers = ['ID', 'Compartment', 'Air Temp (°C)', 'Humidity (%)', 'Water Temp (°C)', 'Interval (s)', 'Timestamp'];
+        const headers = ['ID', 'Sensor ID', 'Type', 'Value', 'Unit', 'Status', 'Interval (s)', 'Timestamp'];
         const csvContent = [
             headers.join(','),
             ...data.map(row => [
                 row.id,
-                row.compartment_id,
-                row.temperature_air,
-                row.humidity_air,
-                row.temperature_water,
+                row.sensor_id,
+                row.sensor_type,
+                row.value,
+                row.unit,
+                row.status,
                 row.interval || 'N/A',
                 `"${new Date(row.timestamp).toLocaleString()}"`
             ].join(','))

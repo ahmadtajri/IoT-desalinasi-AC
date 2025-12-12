@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Trash2, Filter, Calendar, RefreshCw, ChevronDown, CheckCircle, XCircle, X, Droplets, Thermometer } from 'lucide-react';
+import { Download, Trash2, Filter, Calendar, RefreshCw, ChevronDown, CheckCircle, XCircle, X, Droplets, Thermometer, Waves } from 'lucide-react';
 import sensorService from '../services/sensorService';
 import DataLogger from '../components/DataLogger';
 import { useLogger } from '../context/LoggerContext';
@@ -7,8 +7,9 @@ import CustomAlert from '../components/CustomAlert';
 
 const Report = () => {
     // Separate filters for humidity and temperature sensors
-    const [selectedHumiditySensor, setSelectedHumiditySensor] = useState('all'); // 'all', 'H1', 'H2', ..., 'H6'
-    const [selectedTemperatureSensor, setSelectedTemperatureSensor] = useState('all'); // 'all', 'T1', 'T2', ..., 'T12'
+    const [selectedHumiditySensor, setSelectedHumiditySensor] = useState('all'); // 'all', 'none', 'H1', ...
+    const [selectedTemperatureSensor, setSelectedTemperatureSensor] = useState('all'); // 'all', 'none', 'T1', ...
+    const [selectedWaterLevelSensor, setSelectedWaterLevelSensor] = useState('all'); // 'all', 'none', 'WL1'
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -36,12 +37,16 @@ const Report = () => {
     const activeTempSensors = sensorStatus?.temperature
         ? Object.values(sensorStatus.temperature).filter(s => s).length
         : 0;
-    const totalActiveSensors = activeHumiditySensors + activeTempSensors;
-    const totalInactiveSensors = 18 - totalActiveSensors;
+    const activeWaterLevelSensors = sensorStatus?.waterLevel
+        ? Object.values(sensorStatus.waterLevel).filter(s => s).length
+        : 0;
+    const totalActiveSensors = activeHumiditySensors + activeTempSensors + activeWaterLevelSensors;
+    const totalInactiveSensors = 23 - totalActiveSensors;
 
     // Sensor options
-    const humidityOptions = Array.from({ length: 6 }, (_, i) => ({ value: `H${i + 1}`, label: `H${i + 1}` }));
-    const temperatureOptions = Array.from({ length: 12 }, (_, i) => ({ value: `T${i + 1}`, label: `T${i + 1}` }));
+    const humidityOptions = Array.from({ length: 7 }, (_, i) => ({ value: `H${i + 1}`, label: `H${i + 1}` }));
+    const temperatureOptions = Array.from({ length: 15 }, (_, i) => ({ value: `T${i + 1}`, label: `T${i + 1}` }));
+    const waterLevelOptions = [{ value: 'WL1', label: 'WL1' }];
 
     // Helper for Custom Alerts
     const showAlert = (title, message, type = 'info') => {
@@ -78,7 +83,25 @@ const Report = () => {
     }, [logCount]);
 
     const handleToggleLogging = () => {
-        toggleLogging();
+        // Check if all sensor filters are set to 'none'
+        if (selectedHumiditySensor === 'none' && selectedTemperatureSensor === 'none' && selectedWaterLevelSensor === 'none') {
+            showAlert(
+                'Tidak Dapat Mengaktifkan Logger',
+                'Silakan pilih setidaknya satu jenis sensor untuk direkam. Saat ini semua filter sensor diatur ke "None".',
+                'warning'
+            );
+            return;
+        }
+
+        // Pass sensor configuration based on filter selections
+        // If 'none' is selected, disable that sensor type from logging
+        const sensorConfig = {
+            humidity: selectedHumiditySensor !== 'none',
+            temperature: selectedTemperatureSensor !== 'none',
+            waterLevel: selectedWaterLevelSensor !== 'none'
+        };
+
+        toggleLogging(sensorConfig);
     };
 
     const handleIntervalChange = (newInterval) => {
@@ -112,18 +135,35 @@ const Report = () => {
             console.error('Error fetching data:', error);
             // Fallback to mock data with new structure
             const mockData = Array.from({ length: 30 }, (_, i) => {
-                const isHumidity = Math.random() > 0.5;
-                const sensorNum = isHumidity ? Math.floor(Math.random() * 6) + 1 : Math.floor(Math.random() * 12) + 1;
+                const rand = Math.random();
+                let type, sensorNum, prefix;
+
+                if (rand < 0.4) {
+                    type = 'humidity';
+                    sensorNum = Math.floor(Math.random() * 7) + 1;
+                    prefix = 'H';
+                } else if (rand < 0.8) {
+                    type = 'temperature';
+                    sensorNum = Math.floor(Math.random() * 15) + 1;
+                    prefix = 'T';
+                } else {
+                    type = 'waterLevel';
+                    sensorNum = 1;
+                    prefix = 'WL';
+                }
+
                 return {
                     id: i + 1,
-                    sensor_id: isHumidity ? `H${sensorNum}` : `T${sensorNum}`,
-                    sensor_type: isHumidity ? 'humidity' : 'temperature',
-                    value: isHumidity
+                    sensor_id: `${prefix}${sensorNum}`,
+                    sensor_type: type,
+                    value: type === 'humidity'
                         ? (50 + Math.random() * 40).toFixed(1)
-                        : (20 + Math.random() * 130).toFixed(1),
-                    unit: isHumidity ? '%' : '°C',
+                        : type === 'temperature'
+                            ? (20 + Math.random() * 50).toFixed(1)
+                            : (10 + Math.random() * 90).toFixed(1),
+                    unit: type === 'humidity' || type === 'waterLevel' ? '%' : '°C',
                     status: Math.random() > 0.2 ? 'active' : 'inactive',
-                    interval: [5, 10, 60][Math.floor(Math.random() * 3)],
+                    interval: [5, 30, 60][Math.floor(Math.random() * 3)],
                     timestamp: new Date(Date.now() - i * 3600000).toISOString()
                 };
             });
@@ -161,12 +201,20 @@ const Report = () => {
 
         // Filter by humidity sensor
         if (item.sensor_type === 'humidity') {
+            if (selectedHumiditySensor === 'none') return false;
             if (selectedHumiditySensor !== 'all' && item.sensor_id !== selectedHumiditySensor) return false;
         }
 
         // Filter by temperature sensor
         if (item.sensor_type === 'temperature') {
+            if (selectedTemperatureSensor === 'none') return false;
             if (selectedTemperatureSensor !== 'all' && item.sensor_id !== selectedTemperatureSensor) return false;
+        }
+
+        // Filter by water level sensor
+        if (item.sensor_type === 'waterLevel') {
+            if (selectedWaterLevelSensor === 'none') return false;
+            if (selectedWaterLevelSensor !== 'all' && item.sensor_id !== selectedWaterLevelSensor) return false;
         }
 
         return true;
@@ -253,10 +301,21 @@ const Report = () => {
     };
 
     const handleDeleteBySensor = (sensorType) => {
-        const selectedSensor = sensorType === 'humidity' ? selectedHumiditySensor : selectedTemperatureSensor;
-        const sensorTypeName = sensorType === 'humidity' ? 'Kelembapan' : 'Suhu';
+        let selectedSensor;
+        let sensorTypeName;
 
-        if (selectedSensor === 'all') {
+        if (sensorType === 'humidity') {
+            selectedSensor = selectedHumiditySensor;
+            sensorTypeName = 'Kelembapan';
+        } else if (sensorType === 'temperature') {
+            selectedSensor = selectedTemperatureSensor;
+            sensorTypeName = 'Suhu';
+        } else {
+            selectedSensor = selectedWaterLevelSensor;
+            sensorTypeName = 'Water Level';
+        }
+
+        if (selectedSensor === 'all' || selectedSensor === 'none') {
             showAlert('Pilih Sensor', `Silakan pilih sensor ${sensorTypeName} tertentu terlebih dahulu`, 'info');
             return;
         }
@@ -323,32 +382,6 @@ const Report = () => {
 
                     {/* Status & Actions */}
                     <div className="flex flex-wrap items-center gap-3">
-                        {/* Live Indicator */}
-                        <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 rounded-xl border border-green-200">
-                            <div className="relative">
-                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
-                            </div>
-                            <span className="text-green-700 font-medium text-sm">Live</span>
-                        </div>
-
-                        {/* Sensor Status Button */}
-                        <button
-                            onClick={() => setShowStatusModal(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200 hover:from-blue-100 hover:to-cyan-100 transition-all duration-200 cursor-pointer"
-                        >
-                            <div className="flex items-center gap-1.5">
-                                <CheckCircle size={16} className="text-green-500" />
-                                <span className="text-green-700 font-bold text-sm">{totalActiveSensors}</span>
-                            </div>
-                            <div className="w-px h-4 bg-gray-300"></div>
-                            <div className="flex items-center gap-1.5">
-                                <XCircle size={16} className="text-red-400" />
-                                <span className="text-red-600 font-bold text-sm">{totalInactiveSensors}</span>
-                            </div>
-                            <span className="text-gray-500 text-xs ml-1">Detail →</span>
-                        </button>
-
                         {/* Action Buttons */}
                         <button
                             onClick={handleRefresh}
@@ -406,6 +439,21 @@ const Report = () => {
                                             <p className="font-medium text-gray-800">Delete Sensor Suhu</p>
                                             <p className="text-xs text-gray-500">
                                                 {selectedTemperatureSensor === 'all' ? 'Pilih sensor T terlebih dahulu' : `Hapus data ${selectedTemperatureSensor}`}
+                                            </p>
+                                        </div>
+                                    </button>
+
+                                    {/* Delete Water Level Sensor */}
+                                    <button
+                                        onClick={() => { handleDeleteBySensor('waterLevel'); setShowDeleteMenu(false); }}
+                                        className={`w-full text-left px-4 py-3 hover:bg-cyan-50 transition-colors flex items-center gap-3 ${selectedWaterLevelSensor === 'all' || selectedWaterLevelSensor === 'none' ? 'opacity-50' : ''}`}
+                                        disabled={selectedWaterLevelSensor === 'all' || selectedWaterLevelSensor === 'none'}
+                                    >
+                                        <Waves size={16} className="text-cyan-600" />
+                                        <div>
+                                            <p className="font-medium text-gray-800">Delete Sensor Water Level</p>
+                                            <p className="text-xs text-gray-500">
+                                                {(selectedWaterLevelSensor === 'all' || selectedWaterLevelSensor === 'none') ? 'Pilih sensor WL terlebih dahulu' : `Hapus data ${selectedWaterLevelSensor}`}
                                             </p>
                                         </div>
                                     </button>
@@ -474,10 +522,10 @@ const Report = () => {
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Droplets size={20} className="text-blue-500" />
-                                    <h3 className="font-bold text-gray-800">Sensor Kelembapan (H1-H6)</h3>
-                                    <span className="text-sm text-gray-500 ml-auto">{activeHumiditySensors}/6 Aktif</span>
+                                    <h3 className="font-bold text-gray-800">Sensor Kelembapan (H1-H7)</h3>
+                                    <span className="text-sm text-gray-500 ml-auto">{activeHumiditySensors}/7 Aktif</span>
                                 </div>
-                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                                <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
                                     {Object.entries(sensorStatus?.humidity || {}).map(([key, isActive]) => {
                                         const value = realtimeData?.humidity?.[key];
                                         return (
@@ -509,10 +557,10 @@ const Report = () => {
                             <div>
                                 <div className="flex items-center gap-2 mb-4">
                                     <Thermometer size={20} className="text-orange-500" />
-                                    <h3 className="font-bold text-gray-800">Sensor Suhu (T1-T12)</h3>
-                                    <span className="text-sm text-gray-500 ml-auto">{activeTempSensors}/12 Aktif</span>
+                                    <h3 className="font-bold text-gray-800">Sensor Suhu (T1-T15)</h3>
+                                    <span className="text-sm text-gray-500 ml-auto">{activeTempSensors}/15 Aktif</span>
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                                <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
                                     {Object.entries(sensorStatus?.temperature || {}).map(([key, isActive]) => {
                                         const value = realtimeData?.temperature?.[key];
                                         return (
@@ -533,6 +581,41 @@ const Report = () => {
                                                 <span className={`font-bold text-sm ${isActive ? 'text-green-700' : 'text-red-600'}`}>{key}</span>
                                                 <span className={`text-lg font-bold mt-1 ${isActive ? 'text-orange-600' : 'text-gray-400'}`}>
                                                     {isActive && value !== null ? `${value}°` : '--'}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Water Level Sensors */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Waves size={20} className="text-cyan-500" />
+                                    <h3 className="font-bold text-gray-800">Sensor Water Level</h3>
+                                    <span className="text-sm text-gray-500 ml-auto">{activeWaterLevelSensors}/1 Aktif</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                    {Object.entries(sensorStatus?.waterLevel || {}).map(([key, isActive]) => {
+                                        const value = realtimeData?.waterLevel?.[key];
+                                        return (
+                                            <div
+                                                key={key}
+                                                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${isActive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                                            >
+                                                <div className="relative mb-1">
+                                                    {isActive ? (
+                                                        <>
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 left-0 opacity-75"></div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                                    )}
+                                                </div>
+                                                <span className={`font-bold text-sm ${isActive ? 'text-green-700' : 'text-red-600'}`}>{key}</span>
+                                                <span className={`text-lg font-bold mt-1 ${isActive ? 'text-cyan-600' : 'text-gray-400'}`}>
+                                                    {isActive && value !== null ? `${value}%` : '--'}
                                                 </span>
                                             </div>
                                         );
@@ -590,9 +673,8 @@ const Report = () => {
                 <div className="flex flex-wrap gap-4 items-end">
                     {/* Humidity Sensor Filter */}
                     <div className="flex-1 min-w-[200px]">
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                            <Droplets size={16} className="text-blue-500" />
-                            Sensor Kelembapan (H1-H6)
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Sensor Kelembapan
                         </label>
                         <div className="relative">
                             <Droplets className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" size={18} />
@@ -602,6 +684,7 @@ const Report = () => {
                                 onChange={(e) => setSelectedHumiditySensor(e.target.value)}
                             >
                                 <option value="all">Semua Sensor H</option>
+                                <option value="none">None</option>
                                 {humidityOptions.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
@@ -612,9 +695,8 @@ const Report = () => {
 
                     {/* Temperature Sensor Filter */}
                     <div className="flex-1 min-w-[200px]">
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                            <Thermometer size={16} className="text-orange-500" />
-                            Sensor Suhu (T1-T12)
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Sensor Suhu
                         </label>
                         <div className="relative">
                             <Thermometer className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" size={18} />
@@ -624,11 +706,34 @@ const Report = () => {
                                 onChange={(e) => setSelectedTemperatureSensor(e.target.value)}
                             >
                                 <option value="all">Semua Sensor T</option>
+                                <option value="none">None</option>
                                 {temperatureOptions.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" size={18} />
+                        </div>
+                    </div>
+
+                    {/* Water Level Sensor Filter */}
+                    <div className="flex-1 min-w-[200px]">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Sensor Water Level
+                        </label>
+                        <div className="relative">
+                            <Waves className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400" size={18} />
+                            <select
+                                className="w-full pl-10 pr-4 py-2.5 border border-cyan-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none appearance-none bg-cyan-50 text-gray-700 font-medium"
+                                value={selectedWaterLevelSensor}
+                                onChange={(e) => setSelectedWaterLevelSensor(e.target.value)}
+                            >
+                                <option value="all">Semua Sensor WL</option>
+                                <option value="none">None</option>
+                                {waterLevelOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" size={18} />
                         </div>
                     </div>
 
@@ -706,13 +811,13 @@ const Report = () => {
                                             {new Date(row.timestamp).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`text-lg font-bold ${row.sensor_type === 'humidity' ? 'text-blue-600' : 'text-orange-600'}`}>
+                                            <span className={`text-lg font-bold ${row.sensor_type === 'humidity' ? 'text-blue-600' : row.sensor_type === 'temperature' ? 'text-orange-600' : 'text-cyan-600'}`}>
                                                 {row.sensor_id}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${row.sensor_type === 'humidity' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                {row.sensor_type === 'humidity' ? 'Kelembapan' : 'Suhu'}
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${row.sensor_type === 'humidity' ? 'bg-blue-100 text-blue-700' : row.sensor_type === 'temperature' ? 'bg-orange-100 text-orange-700' : 'bg-cyan-100 text-cyan-700'}`}>
+                                                {row.sensor_type === 'humidity' ? 'Kelembapan' : row.sensor_type === 'temperature' ? 'Suhu' : 'Water Level'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 font-medium text-gray-800">
@@ -756,7 +861,7 @@ const Report = () => {
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

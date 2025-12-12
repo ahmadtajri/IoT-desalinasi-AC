@@ -5,48 +5,50 @@ const LoggerController = require('../controllers/LoggerController');
 
 // Welcome endpoint - API info
 router.get('/', (req, res) => {
-    const DataService = require('../services/DataService');
-
     res.json({
-        message: 'ESP32 IoT Data Logger API',
-        version: '1.0',
-        mode: '🎭 MOCK DATA MODE (No Database Required)',
+        message: 'ESP32 IoT Desalinasi Data Logger API',
+        version: '2.0',
+        description: 'API for managing sensor data (H1-H7 Humidity, T1-T15 Temperature, WL1 Water Level)',
         endpoints: {
             'GET /api/': 'API information',
-            'GET /api/stats': 'Mock data statistics',
+            'GET /api/stats': 'Data statistics',
             'GET /api/database/status': 'Get database status and warnings',
             'GET /api/sensors': 'Get all sensor data',
-            'GET /api/sensors?compartment=1': 'Get data by compartment (1-6)',
+            'GET /api/sensors?sensorId=H1': 'Get data by sensor ID (H1-H7, T1-T15, WL1)',
+            'GET /api/sensors?sensorType=humidity': 'Get data by sensor type (humidity, temperature, waterLevel)',
             'GET /api/sensors?limit=50': 'Get limited data',
             'GET /api/sensors?startDate=...&endDate=...': 'Get data by date range',
             'POST /api/sensors': 'Create new sensor data',
-            'DELETE /api/sensors/:id': 'Delete single sensor data',
+            'DELETE /api/sensors/:id': 'Delete single sensor data by record ID',
             'DELETE /api/sensors': 'Delete all sensor data',
-            'DELETE /api/sensors/compartment/:compartment': 'Delete all data from specific compartment (1-6)',
-            'DELETE /api/sensors/interval/:interval': 'Delete data by logging interval (e.g., 5)',
+            'DELETE /api/sensors/sensor/:sensorId': 'Delete all data from specific sensor (H1, T2, WL1, etc)',
+            'DELETE /api/sensors/type/:sensorType': 'Delete all data by sensor type (humidity, temperature, waterLevel)',
+            'DELETE /api/sensors/interval/:interval': 'Delete data by logging interval (5, 30, 60)',
             'GET /api/logger/status': 'Get background logger status',
             'POST /api/logger/start': 'Start background data logger',
             'POST /api/logger/stop': 'Stop background data logger',
-            'POST /api/logger/config': 'Configure logger settings (body: { "interval": 5000 })'
+            'POST /api/logger/config': 'Configure logger settings'
         },
-        documentation: {
-            'Postman Tutorial': 'See POSTMAN_TUTORIAL.md',
-            'Quick Reference': 'See POSTMAN_QUICK_REFERENCE.md',
-            'cURL Commands': 'See CURL_COMMANDS.md'
+        sensorConfig: {
+            humidity: 'H1-H7 (7 sensors)',
+            temperature: 'T1-T15 (15 sensors)',
+            waterLevel: 'WL1 (1 sensor)',
+            total: '23 sensors'
         },
         example: {
-            'GET': 'http://localhost:3000/api/sensors',
+            'GET': 'http://localhost:3000/api/sensors?sensorType=humidity',
             'POST': {
                 url: 'http://localhost:3000/api/sensors',
                 body: {
-                    compartment_id: 1,
-                    temperature_air: 27.5,
-                    humidity_air: 65.3,
-                    temperature_water: 22.8
+                    sensor_id: 'H1',
+                    sensor_type: 'humidity',
+                    value: 65.5,
+                    unit: '%',
+                    status: 'active',
+                    interval: 5
                 }
             }
-        },
-        note: 'Data is stored in memory and will reset on server restart'
+        }
     });
 });
 
@@ -55,9 +57,8 @@ router.get('/stats', async (req, res) => {
     const DataService = require('../services/DataService');
     const stats = await DataService.getStats();
     res.json({
-        mode: 'Mock Data Mode',
         ...stats,
-        message: 'All data is stored in memory (not persistent)'
+        message: 'Sensor data statistics'
     });
 });
 
@@ -68,10 +69,13 @@ router.get('/database/status', SensorController.getDatabaseStatus);
 // IMPORTANT: Order matters! More specific routes must come BEFORE general routes
 router.get('/sensors', SensorController.getAll);
 router.post('/sensors', SensorController.create);
+
 // Specific DELETE routes first
-router.delete('/sensors/compartment/:compartment', SensorController.deleteByCompartment);
+router.delete('/sensors/sensor/:sensorId', SensorController.deleteBySensorId);
+router.delete('/sensors/type/:sensorType', SensorController.deleteBySensorType);
 router.delete('/sensors/interval/:interval', SensorController.deleteByInterval);
 router.delete('/sensors/:id', SensorController.delete);
+
 // General DELETE route last
 router.delete('/sensors', SensorController.deleteAll);
 

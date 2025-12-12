@@ -4,124 +4,118 @@
 -- Jalankan script ini di phpMyAdmin atau MySQL CLI
 -- untuk membuat database dan tabel secara otomatis
 -- ================================================
+-- UPDATED: Support individual sensors (H1-H7, T1-T15, WL1)
+-- ================================================
 
 -- 1. Buat Database
-CREATE DATABASE IF NOT EXISTS iot_desalinasi 
+CREATE DATABASE IF NOT EXISTS iot_desalinasi
 CHARACTER SET utf8mb4 
 COLLATE utf8mb4_general_ci;
 
 -- 2. Gunakan Database
 USE iot_desalinasi;
 
--- 3. Buat Tabel sensor_data
+-- 3. Drop tabel lama jika ada (HATI-HATI: Ini akan menghapus semua data!)
+-- DROP TABLE IF EXISTS sensor_data;
+
+-- 4. Buat Tabel sensor_data (STRUKTUR BARU)
 CREATE TABLE IF NOT EXISTS `sensor_data` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `compartment_id` int(11) NOT NULL COMMENT 'ID Compartment (1-6)',
-  `temperature_air` float NOT NULL COMMENT 'Suhu Udara (°C)',
-  `humidity_air` float NOT NULL COMMENT 'Kelembapan Udara (%)',
-  `temperature_water` float NOT NULL COMMENT 'Suhu Air (°C)',
-  `interval` int(11) DEFAULT NULL COMMENT 'Interval Logging (detik)',
+  `sensor_id` varchar(10) NOT NULL COMMENT 'Sensor ID (H1-H7, T1-T15, WL1)',
+  `sensor_type` enum('humidity','temperature','waterLevel') NOT NULL COMMENT 'Tipe Sensor',
+  `value` float NOT NULL COMMENT 'Nilai Pembacaan Sensor',
+  `unit` varchar(10) NOT NULL DEFAULT '%' COMMENT 'Satuan (%, °C)',
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active' COMMENT 'Status Sensor',
+  `interval` int(11) DEFAULT NULL COMMENT 'Interval Logging (detik: 5, 30, 60)',
   `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu Pencatatan',
   PRIMARY KEY (`id`),
-  KEY `idx_compartment` (`compartment_id`),
+  KEY `idx_sensor_id` (`sensor_id`),
+  KEY `idx_sensor_type` (`sensor_type`),
   KEY `idx_timestamp` (`timestamp`),
   KEY `idx_interval` (`interval`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Tabel Data Sensor IoT Desalinasi';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Tabel Data Sensor IoT Desalinasi v2.0';
 
--- 4. Insert Data Dummy untuk Testing (Opsional)
--- Data dipisahkan per compartment untuk memudahkan tracking
+-- 5. Insert Data Dummy untuk Testing (Opsional)
 
 -- ========================================
--- COMPARTMENT 1 - Data Sensor
+-- HUMIDITY SENSORS (H1-H7)
 -- ========================================
 INSERT INTO `sensor_data` 
-  (`compartment_id`, `temperature_air`, `humidity_air`, `temperature_water`, `interval`, `timestamp`) 
+  (`sensor_id`, `sensor_type`, `value`, `unit`, `status`, `interval`, `timestamp`) 
 VALUES
-  (1, 27.5, 65.2, 22.3, 5, NOW() - INTERVAL 30 MINUTE),
-  (1, 27.6, 65.0, 22.4, 5, NOW() - INTERVAL 25 MINUTE),
-  (1, 27.8, 64.8, 22.5, 5, NOW() - INTERVAL 20 MINUTE),
-  (1, 27.4, 65.5, 22.2, 10, NOW() - INTERVAL 15 MINUTE),
-  (1, 27.7, 65.1, 22.6, 10, NOW() - INTERVAL 10 MINUTE);
+  ('H1', 'humidity', 65.2, '%', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('H1', 'humidity', 65.5, '%', 'active', 5, NOW() - INTERVAL 25 MINUTE),
+  ('H2', 'humidity', 63.8, '%', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('H2', 'humidity', 64.2, '%', 'active', 5, NOW() - INTERVAL 25 MINUTE),
+  ('H3', 'humidity', 66.5, '%', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('H4', 'humidity', 64.1, '%', 'active', 30, NOW() - INTERVAL 20 MINUTE),
+  ('H5', 'humidity', 65.9, '%', 'active', 30, NOW() - INTERVAL 20 MINUTE),
+  ('H6', 'humidity', 62.7, '%', 'active', 60, NOW() - INTERVAL 15 MINUTE),
+  ('H7', 'humidity', 67.3, '%', 'active', 60, NOW() - INTERVAL 15 MINUTE);
 
 -- ========================================
--- COMPARTMENT 2 - Data Sensor
+-- TEMPERATURE SENSORS (T1-T15)
 -- ========================================
 INSERT INTO `sensor_data` 
-  (`compartment_id`, `temperature_air`, `humidity_air`, `temperature_water`, `interval`, `timestamp`) 
+  (`sensor_id`, `sensor_type`, `value`, `unit`, `status`, `interval`, `timestamp`) 
 VALUES
-  (2, 28.1, 63.8, 21.9, 5, NOW() - INTERVAL 30 MINUTE),
-  (2, 28.0, 64.2, 22.0, 5, NOW() - INTERVAL 25 MINUTE),
-  (2, 28.3, 63.5, 21.8, 5, NOW() - INTERVAL 20 MINUTE),
-  (2, 27.9, 64.0, 22.1, 10, NOW() - INTERVAL 15 MINUTE),
-  (2, 28.2, 63.9, 21.9, 10, NOW() - INTERVAL 10 MINUTE);
+  ('T1', 'temperature', 27.5, '°C', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('T1', 'temperature', 27.8, '°C', 'active', 5, NOW() - INTERVAL 25 MINUTE),
+  ('T2', 'temperature', 28.1, '°C', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('T3', 'temperature', 26.9, '°C', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('T4', 'temperature', 27.8, '°C', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('T5', 'temperature', 27.2, '°C', 'active', 30, NOW() - INTERVAL 20 MINUTE),
+  ('T6', 'temperature', 28.3, '°C', 'active', 30, NOW() - INTERVAL 20 MINUTE),
+  ('T7', 'temperature', 29.1, '°C', 'active', 30, NOW() - INTERVAL 20 MINUTE),
+  ('T8', 'temperature', 26.5, '°C', 'active', 60, NOW() - INTERVAL 15 MINUTE),
+  ('T9', 'temperature', 30.2, '°C', 'active', 60, NOW() - INTERVAL 15 MINUTE),
+  ('T10', 'temperature', 31.0, '°C', 'active', 5, NOW() - INTERVAL 10 MINUTE),
+  ('T11', 'temperature', 45.5, '°C', 'active', 5, NOW() - INTERVAL 10 MINUTE),
+  ('T12', 'temperature', 50.2, '°C', 'active', 5, NOW() - INTERVAL 10 MINUTE),
+  ('T13', 'temperature', 55.8, '°C', 'active', 30, NOW() - INTERVAL 5 MINUTE),
+  ('T14', 'temperature', 60.1, '°C', 'active', 30, NOW() - INTERVAL 5 MINUTE),
+  ('T15', 'temperature', 65.3, '°C', 'active', 60, NOW() - INTERVAL 5 MINUTE);
 
 -- ========================================
--- COMPARTMENT 3 - Data Sensor
+-- WATER LEVEL SENSOR (WL1)
 -- ========================================
 INSERT INTO `sensor_data` 
-  (`compartment_id`, `temperature_air`, `humidity_air`, `temperature_water`, `interval`, `timestamp`) 
+  (`sensor_id`, `sensor_type`, `value`, `unit`, `status`, `interval`, `timestamp`) 
 VALUES
-  (3, 26.9, 66.5, 22.7, 5, NOW() - INTERVAL 30 MINUTE),
-  (3, 27.1, 66.1, 22.6, 5, NOW() - INTERVAL 25 MINUTE),
-  (3, 26.8, 66.8, 22.8, 5, NOW() - INTERVAL 20 MINUTE),
-  (3, 27.0, 66.3, 22.5, 10, NOW() - INTERVAL 15 MINUTE),
-  (3, 27.2, 66.0, 22.7, 10, NOW() - INTERVAL 10 MINUTE);
+  ('WL1', 'waterLevel', 75.5, '%', 'active', 5, NOW() - INTERVAL 30 MINUTE),
+  ('WL1', 'waterLevel', 76.2, '%', 'active', 5, NOW() - INTERVAL 25 MINUTE),
+  ('WL1', 'waterLevel', 74.8, '%', 'active', 5, NOW() - INTERVAL 20 MINUTE),
+  ('WL1', 'waterLevel', 77.1, '%', 'active', 30, NOW() - INTERVAL 15 MINUTE),
+  ('WL1', 'waterLevel', 78.5, '%', 'active', 60, NOW() - INTERVAL 10 MINUTE);
 
--- ========================================
--- COMPARTMENT 4 - Data Sensor
--- ========================================
-INSERT INTO `sensor_data` 
-  (`compartment_id`, `temperature_air`, `humidity_air`, `temperature_water`, `interval`, `timestamp`) 
-VALUES
-  (4, 27.8, 64.1, 22.1, 5, NOW() - INTERVAL 30 MINUTE),
-  (4, 27.9, 63.9, 22.2, 5, NOW() - INTERVAL 25 MINUTE),
-  (4, 27.7, 64.3, 22.0, 5, NOW() - INTERVAL 20 MINUTE),
-  (4, 28.0, 64.0, 22.3, 10, NOW() - INTERVAL 15 MINUTE),
-  (4, 27.8, 64.2, 22.1, 10, NOW() - INTERVAL 10 MINUTE);
+-- 6. Verifikasi Data
+SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT 20;
 
--- ========================================
--- COMPARTMENT 5 - Data Sensor
--- ========================================
-INSERT INTO `sensor_data` 
-  (`compartment_id`, `temperature_air`, `humidity_air`, `temperature_water`, `interval`, `timestamp`) 
-VALUES
-  (5, 27.2, 65.9, 22.5, 5, NOW() - INTERVAL 30 MINUTE),
-  (5, 27.3, 65.7, 22.6, 5, NOW() - INTERVAL 25 MINUTE),
-  (5, 27.1, 66.0, 22.4, 5, NOW() - INTERVAL 20 MINUTE),
-  (5, 27.4, 65.8, 22.7, 10, NOW() - INTERVAL 15 MINUTE),
-  (5, 27.2, 66.1, 22.5, 10, NOW() - INTERVAL 10 MINUTE);
-
--- ========================================
--- COMPARTMENT 6 - Data Sensor
--- ========================================
-INSERT INTO `sensor_data` 
-  (`compartment_id`, `temperature_air`, `humidity_air`, `temperature_water`, `interval`, `timestamp`) 
-VALUES
-  (6, 28.3, 62.7, 21.8, 5, NOW() - INTERVAL 30 MINUTE),
-  (6, 28.4, 62.5, 21.9, 5, NOW() - INTERVAL 25 MINUTE),
-  (6, 28.2, 62.9, 21.7, 5, NOW() - INTERVAL 20 MINUTE),
-  (6, 28.5, 62.6, 22.0, 10, NOW() - INTERVAL 15 MINUTE),
-  (6, 28.3, 62.8, 21.8, 10, NOW() - INTERVAL 10 MINUTE);
-
--- 5. Verifikasi Data
-SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT 10;
-
--- 6. Lihat Struktur Tabel
+-- 7. Lihat Struktur Tabel
 DESCRIBE sensor_data;
 
--- 7. Hitung Total Data
+-- 8. Hitung Total Data
 SELECT COUNT(*) as total_records FROM sensor_data;
 
--- 8. Data Per Compartment
+-- 9. Data Per Sensor Type
 SELECT 
-  compartment_id,
+  sensor_type,
   COUNT(*) as total_records,
-  AVG(temperature_air) as avg_temp_air,
-  AVG(humidity_air) as avg_humidity,
-  AVG(temperature_water) as avg_temp_water
+  AVG(value) as avg_value,
+  MIN(value) as min_value,
+  MAX(value) as max_value
 FROM sensor_data 
-GROUP BY compartment_id 
-ORDER BY compartment_id;
+GROUP BY sensor_type;
+
+-- 10. Data Per Sensor ID
+SELECT 
+  sensor_id,
+  sensor_type,
+  COUNT(*) as total_records,
+  AVG(value) as avg_value
+FROM sensor_data 
+GROUP BY sensor_id, sensor_type
+ORDER BY sensor_type, sensor_id;
 
 -- ================================================
 -- Query Berguna untuk Maintenance
@@ -130,10 +124,14 @@ ORDER BY compartment_id;
 -- Hapus data lebih dari 30 hari
 -- DELETE FROM sensor_data WHERE timestamp < DATE_SUB(NOW(), INTERVAL 30 DAY);
 
+-- Hapus semua data humidity
+-- DELETE FROM sensor_data WHERE sensor_type = 'humidity';
+
+-- Hapus data sensor tertentu
+-- DELETE FROM sensor_data WHERE sensor_id = 'H1';
+
 -- Hapus semua data (HATI-HATI!)
 -- TRUNCATE TABLE sensor_data;
-
--- Backup data ke file CSV (di phpMyAdmin: Export → CSV)
 
 -- Reset Auto Increment
 -- ALTER TABLE sensor_data AUTO_INCREMENT = 1;

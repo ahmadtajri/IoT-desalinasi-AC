@@ -3,11 +3,13 @@ const DataService = require('../services/DataService');
 const SensorController = {
     async getAll(req, res) {
         try {
-            const { limit, compartment, startDate, endDate } = req.query;
+            const { limit, sensorId, sensorType, startDate, endDate } = req.query;
 
             let data;
-            if (compartment && compartment !== 'all') {
-                data = await DataService.getDataByCompartment(parseInt(compartment), limit || 100);
+            if (sensorId && sensorId !== 'all') {
+                data = await DataService.getDataBySensorId(sensorId, limit || 100);
+            } else if (sensorType && sensorType !== 'all') {
+                data = await DataService.getDataBySensorType(sensorType, limit || 100);
             } else if (startDate && endDate) {
                 data = await DataService.getDataByDateRange(new Date(startDate), new Date(endDate));
             } else {
@@ -23,21 +25,25 @@ const SensorController = {
 
     async create(req, res) {
         try {
-            const { compartment_id, temperature_air, humidity_air, temperature_water, interval } = req.body;
+            const { sensor_id, sensor_type, value, unit, status, interval } = req.body;
 
-            // Relaxed validation: Check if compartment_id exists and AT LEAST ONE sensor value is present
-            if (!compartment_id) {
-                return res.status(400).json({ error: 'Missing compartment_id' });
+            // Validation
+            if (!sensor_id) {
+                return res.status(400).json({ error: 'Missing sensor_id' });
             }
-            if (!temperature_air && !humidity_air && !temperature_water) {
-                return res.status(400).json({ error: 'At least one sensor value (air temp, humidity, or water temp) is required' });
+            if (!sensor_type) {
+                return res.status(400).json({ error: 'Missing sensor_type' });
+            }
+            if (value === undefined || value === null) {
+                return res.status(400).json({ error: 'Missing value' });
             }
 
             const newData = await DataService.createData({
-                compartment_id,
-                temperature_air,
-                humidity_air,
-                temperature_water,
+                sensor_id,
+                sensor_type,
+                value: parseFloat(value),
+                unit: unit || (sensor_type === 'temperature' ? '°C' : '%'),
+                status: status || 'active',
                 interval: parseInt(interval) || null
             });
             res.status(201).json(newData);
@@ -72,38 +78,61 @@ const SensorController = {
         }
     },
 
-    async deleteByCompartment(req, res) {
+    async deleteBySensorId(req, res) {
         try {
-            const { compartment } = req.params;
-            console.log('deleteByCompartment called with compartment:', compartment);
+            const { sensorId } = req.params;
+            console.log('deleteBySensorId called with sensorId:', sensorId);
 
-            const compartmentId = parseInt(compartment);
-            console.log('Parsed compartmentId:', compartmentId);
-
-            // Check if parsing was successful and value is in valid range
-            if (isNaN(compartmentId) || compartmentId < 1 || compartmentId > 6) {
-                console.log('Invalid compartment ID:', compartmentId);
+            if (!sensorId) {
                 return res.status(400).json({
-                    error: 'Invalid compartment ID. Must be between 1-6',
-                    received: compartment
+                    error: 'Invalid sensor ID',
+                    received: sensorId
                 });
             }
 
-            console.log('Attempting to delete data for compartment:', compartmentId);
-            const deleted = await DataService.deleteDataByCompartment(compartmentId);
+            console.log('Attempting to delete data for sensor:', sensorId);
+            const deleted = await DataService.deleteDataBySensorId(sensorId);
             console.log('Delete operation completed. Rows affected:', deleted);
 
             res.json({
                 success: true,
-                message: `All data for compartment ${compartmentId} deleted successfully`,
+                message: `All data for sensor ${sensorId} deleted successfully`,
                 deletedCount: deleted
             });
         } catch (error) {
-            console.error('Error in deleteByCompartment:', error);
+            console.error('Error in deleteBySensorId:', error);
             res.status(500).json({
                 success: false,
                 error: error.message,
                 details: error.stack
+            });
+        }
+    },
+
+    async deleteBySensorType(req, res) {
+        try {
+            const { sensorType } = req.params;
+            console.log('deleteBySensorType called with type:', sensorType);
+
+            const validTypes = ['humidity', 'temperature', 'waterLevel'];
+            if (!validTypes.includes(sensorType)) {
+                return res.status(400).json({
+                    error: 'Invalid sensor type. Must be: humidity, temperature, or waterLevel',
+                    received: sensorType
+                });
+            }
+
+            const deleted = await DataService.deleteDataBySensorType(sensorType);
+            res.json({
+                success: true,
+                message: `All data for sensor type ${sensorType} deleted successfully`,
+                deletedCount: deleted
+            });
+        } catch (error) {
+            console.error('Error in deleteBySensorType:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
             });
         }
     },
