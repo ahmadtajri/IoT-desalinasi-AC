@@ -7,17 +7,17 @@ const LoggerController = {
     },
 
     start: (req, res) => {
-        const { enableHumidity, enableTemperature, enableWaterLevel } = req.body;
+        const { humidity, temperature, waterLevel } = req.body;
 
-        // Configure sensor types if provided
-        if (enableHumidity !== undefined || enableTemperature !== undefined || enableWaterLevel !== undefined) {
-            BackgroundLogger.setSensorTypes(
-                enableHumidity !== false,
-                enableTemperature !== false,
-                enableWaterLevel !== false
-            );
-        }
+        // Configure specific sensors if provided
+        // Values can be: true/'all', false/'none', or specific sensor ID like 'H1', 'T5'
+        const sensorConfig = {
+            humidity: humidity !== undefined ? humidity : 'all',
+            temperature: temperature !== undefined ? temperature : 'all',
+            waterLevel: waterLevel !== undefined ? waterLevel : 'all'
+        };
 
+        BackgroundLogger.setSensorConfig(sensorConfig);
         BackgroundLogger.start();
         res.json({ message: 'Logger started', status: BackgroundLogger.getStatus() });
     },
@@ -28,23 +28,24 @@ const LoggerController = {
     },
 
     config: (req, res) => {
-        const { interval, enableHumidity, enableTemperature, enableWaterLevel } = req.body;
+        const { interval, humidity, temperature, waterLevel } = req.body;
 
         // Update interval if provided
         if (interval && typeof interval === 'number') {
             BackgroundLogger.setIntervalTime(interval);
         }
 
-        // Update sensor types if provided
-        if (enableHumidity !== undefined || enableTemperature !== undefined || enableWaterLevel !== undefined) {
-            BackgroundLogger.setSensorTypes(
-                enableHumidity !== false,
-                enableTemperature !== false,
-                enableWaterLevel !== false
-            );
+        // Update sensor config if any sensor parameter is provided
+        if (humidity !== undefined || temperature !== undefined || waterLevel !== undefined) {
+            const sensorConfig = {};
+            if (humidity !== undefined) sensorConfig.humidity = humidity;
+            if (temperature !== undefined) sensorConfig.temperature = temperature;
+            if (waterLevel !== undefined) sensorConfig.waterLevel = waterLevel;
+
+            BackgroundLogger.setSensorConfig(sensorConfig);
         }
 
-        if (!interval && enableHumidity === undefined && enableTemperature === undefined && enableWaterLevel === undefined) {
+        if (!interval && humidity === undefined && temperature === undefined && waterLevel === undefined) {
             return res.status(400).json({ error: 'No valid configuration provided' });
         }
 

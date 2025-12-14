@@ -94,13 +94,14 @@ const Report = () => {
         }
 
         // Pass sensor configuration based on filter selections
-        // If 'none' is selected, disable that sensor type from logging
+        // Send specific sensor ID if selected, 'all' for all sensors, 'none' if disabled
         const sensorConfig = {
-            humidity: selectedHumiditySensor !== 'none',
-            temperature: selectedTemperatureSensor !== 'none',
-            waterLevel: selectedWaterLevelSensor !== 'none'
+            humidity: selectedHumiditySensor === 'none' ? 'none' : selectedHumiditySensor,
+            temperature: selectedTemperatureSensor === 'none' ? 'none' : selectedTemperatureSensor,
+            waterLevel: selectedWaterLevelSensor === 'none' ? 'none' : selectedWaterLevelSensor
         };
 
+        console.log('[Report] Starting logger with config:', sensorConfig);
         toggleLogging(sensorConfig);
     };
 
@@ -112,13 +113,44 @@ const Report = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const params = {};
-            if (selectedSensor !== 'all') {
-                params.sensor = selectedSensor;
+            const params = { limit: 500 }; // Get more data for filtering
+
+            // Build sensor ID filter based on selected sensors
+            const selectedSensorIds = [];
+
+            // Add humidity sensor filter
+            if (selectedHumiditySensor !== 'none') {
+                if (selectedHumiditySensor === 'all') {
+                    // Will be filtered client-side
+                } else {
+                    selectedSensorIds.push(selectedHumiditySensor);
+                }
             }
-            if (selectedSensorType !== 'all') {
-                params.sensorType = selectedSensorType;
+
+            // Add temperature sensor filter  
+            if (selectedTemperatureSensor !== 'none') {
+                if (selectedTemperatureSensor === 'all') {
+                    // Will be filtered client-side
+                } else {
+                    selectedSensorIds.push(selectedTemperatureSensor);
+                }
             }
+
+            // Add water level sensor filter
+            if (selectedWaterLevelSensor !== 'none') {
+                if (selectedWaterLevelSensor === 'all') {
+                    // Will be filtered client-side
+                } else {
+                    selectedSensorIds.push(selectedWaterLevelSensor);
+                }
+            }
+
+            // If specific sensors selected, add to params
+            if (selectedSensorIds.length > 0 && selectedSensorIds.length <= 3) {
+                params.sensorId = selectedSensorIds[0]; // API currently supports single sensor
+            }
+
+            // Add date range filter
             if (dateRange.start && dateRange.end) {
                 params.startDate = dateRange.start;
                 params.endDate = dateRange.end;
@@ -193,30 +225,44 @@ const Report = () => {
     // Filter data
     const safeData = Array.isArray(data) ? data : [];
     const filteredData = safeData.filter(item => {
-        // Filter by interval
-        if (item.interval) {
+        // Filter by interval - only filter if item has interval
+        if (item.interval !== undefined && item.interval !== null) {
             const selectedSeconds = Math.floor(logInterval / 1000);
             if (item.interval !== selectedSeconds) return false;
         }
 
-        // Filter by humidity sensor
-        if (item.sensor_type === 'humidity') {
+        // Determine if this sensor type should be shown based on filter settings
+        const sensorType = item.sensor_type;
+        const sensorId = item.sensor_id;
+
+        if (sensorType === 'humidity') {
+            // If humidity filter is 'none', hide all humidity data
             if (selectedHumiditySensor === 'none') return false;
-            if (selectedHumiditySensor !== 'all' && item.sensor_id !== selectedHumiditySensor) return false;
+            // If specific sensor selected, only show that sensor
+            if (selectedHumiditySensor !== 'all' && sensorId !== selectedHumiditySensor) return false;
+            // If 'all', show this humidity data
+            return true;
         }
 
-        // Filter by temperature sensor
-        if (item.sensor_type === 'temperature') {
+        if (sensorType === 'temperature') {
+            // If temperature filter is 'none', hide all temperature data
             if (selectedTemperatureSensor === 'none') return false;
-            if (selectedTemperatureSensor !== 'all' && item.sensor_id !== selectedTemperatureSensor) return false;
+            // If specific sensor selected, only show that sensor
+            if (selectedTemperatureSensor !== 'all' && sensorId !== selectedTemperatureSensor) return false;
+            // If 'all', show this temperature data
+            return true;
         }
 
-        // Filter by water level sensor
-        if (item.sensor_type === 'waterLevel') {
+        if (sensorType === 'waterLevel') {
+            // If water level filter is 'none', hide all water level data
             if (selectedWaterLevelSensor === 'none') return false;
-            if (selectedWaterLevelSensor !== 'all' && item.sensor_id !== selectedWaterLevelSensor) return false;
+            // If specific sensor selected, only show that sensor
+            if (selectedWaterLevelSensor !== 'all' && sensorId !== selectedWaterLevelSensor) return false;
+            // If 'all', show this water level data
+            return true;
         }
 
+        // Unknown sensor type - show by default
         return true;
     });
 
@@ -315,19 +361,40 @@ const Report = () => {
             sensorTypeName = 'Water Level';
         }
 
-        if (selectedSensor === 'all' || selectedSensor === 'none') {
-            showAlert('Pilih Sensor', `Silakan pilih sensor ${sensorTypeName} tertentu terlebih dahulu`, 'info');
+        // If 'none' is selected, show warning
+        if (selectedSensor === 'none') {
+            showAlert('Pilih Sensor', `Silakan pilih sensor ${sensorTypeName} terlebih dahulu`, 'info');
             return;
         }
 
+        // Determine what to delete
+        const isDeleteAll = selectedSensor === 'all';
+        const deleteTitle = isDeleteAll
+            ? `Hapus SEMUA Data ${sensorTypeName}?`
+            : `Hapus Data Sensor ${selectedSensor}?`;
+        const deleteMessage = isDeleteAll
+            ? `Apakah Anda yakin ingin menghapus SEMUA data sensor ${sensorTypeName}?`
+            : `Apakah Anda yakin ingin menghapus SEMUA data dari Sensor ${selectedSensor}?`;
+
         showConfirm(
-            `Hapus Data Sensor ${selectedSensor}?`,
-            `Apakah Anda yakin ingin menghapus SEMUA data dari Sensor ${selectedSensor}?`,
+            deleteTitle,
+            deleteMessage,
             async () => {
                 try {
-                    const newData = data.filter(item => item.sensor_id !== selectedSensor);
-                    setData(newData);
-                    showAlert('Sukses', `Data sensor ${selectedSensor} berhasil dihapus.`, 'success');
+                    if (isDeleteAll) {
+                        // Delete all sensors of this type
+                        await sensorService.deleteBySensorType(sensorType);
+                        const newData = data.filter(item => item.sensor_type !== sensorType);
+                        setData(newData);
+                        showAlert('Sukses', `Semua data ${sensorTypeName} berhasil dihapus.`, 'success');
+                    } else {
+                        // Delete specific sensor
+                        await sensorService.deleteBySensorId(selectedSensor);
+                        const newData = data.filter(item => item.sensor_id !== selectedSensor);
+                        setData(newData);
+                        showAlert('Sukses', `Data sensor ${selectedSensor} berhasil dihapus.`, 'success');
+                    }
+                    fetchData(); // Refresh data
                 } catch (error) {
                     console.error('Error deleting sensor data:', error);
                     showAlert('Error', 'Gagal menghapus data.', 'error');
@@ -416,14 +483,18 @@ const Report = () => {
                                     {/* Delete Humidity Sensor */}
                                     <button
                                         onClick={() => { handleDeleteBySensor('humidity'); setShowDeleteMenu(false); }}
-                                        className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 ${selectedHumiditySensor === 'all' ? 'opacity-50' : ''}`}
-                                        disabled={selectedHumiditySensor === 'all'}
+                                        className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 ${selectedHumiditySensor === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={selectedHumiditySensor === 'none'}
                                     >
                                         <Droplets size={16} className="text-blue-600" />
                                         <div>
                                             <p className="font-medium text-gray-800">Delete Sensor Kelembapan</p>
                                             <p className="text-xs text-gray-500">
-                                                {selectedHumiditySensor === 'all' ? 'Pilih sensor H terlebih dahulu' : `Hapus data ${selectedHumiditySensor}`}
+                                                {selectedHumiditySensor === 'none'
+                                                    ? 'Pilih sensor H terlebih dahulu'
+                                                    : selectedHumiditySensor === 'all'
+                                                        ? 'Hapus SEMUA data kelembapan (H1-H7)'
+                                                        : `Hapus data ${selectedHumiditySensor}`}
                                             </p>
                                         </div>
                                     </button>
@@ -431,14 +502,18 @@ const Report = () => {
                                     {/* Delete Temperature Sensor */}
                                     <button
                                         onClick={() => { handleDeleteBySensor('temperature'); setShowDeleteMenu(false); }}
-                                        className={`w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-center gap-3 ${selectedTemperatureSensor === 'all' ? 'opacity-50' : ''}`}
-                                        disabled={selectedTemperatureSensor === 'all'}
+                                        className={`w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-center gap-3 ${selectedTemperatureSensor === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={selectedTemperatureSensor === 'none'}
                                     >
                                         <Thermometer size={16} className="text-orange-600" />
                                         <div>
                                             <p className="font-medium text-gray-800">Delete Sensor Suhu</p>
                                             <p className="text-xs text-gray-500">
-                                                {selectedTemperatureSensor === 'all' ? 'Pilih sensor T terlebih dahulu' : `Hapus data ${selectedTemperatureSensor}`}
+                                                {selectedTemperatureSensor === 'none'
+                                                    ? 'Pilih sensor T terlebih dahulu'
+                                                    : selectedTemperatureSensor === 'all'
+                                                        ? 'Hapus SEMUA data suhu (T1-T15)'
+                                                        : `Hapus data ${selectedTemperatureSensor}`}
                                             </p>
                                         </div>
                                     </button>
@@ -446,14 +521,18 @@ const Report = () => {
                                     {/* Delete Water Level Sensor */}
                                     <button
                                         onClick={() => { handleDeleteBySensor('waterLevel'); setShowDeleteMenu(false); }}
-                                        className={`w-full text-left px-4 py-3 hover:bg-cyan-50 transition-colors flex items-center gap-3 ${selectedWaterLevelSensor === 'all' || selectedWaterLevelSensor === 'none' ? 'opacity-50' : ''}`}
-                                        disabled={selectedWaterLevelSensor === 'all' || selectedWaterLevelSensor === 'none'}
+                                        className={`w-full text-left px-4 py-3 hover:bg-cyan-50 transition-colors flex items-center gap-3 ${selectedWaterLevelSensor === 'none' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={selectedWaterLevelSensor === 'none'}
                                     >
                                         <Waves size={16} className="text-cyan-600" />
                                         <div>
                                             <p className="font-medium text-gray-800">Delete Sensor Water Level</p>
                                             <p className="text-xs text-gray-500">
-                                                {(selectedWaterLevelSensor === 'all' || selectedWaterLevelSensor === 'none') ? 'Pilih sensor WL terlebih dahulu' : `Hapus data ${selectedWaterLevelSensor}`}
+                                                {selectedWaterLevelSensor === 'none'
+                                                    ? 'Pilih sensor WL terlebih dahulu'
+                                                    : selectedWaterLevelSensor === 'all'
+                                                        ? 'Hapus SEMUA data water level'
+                                                        : `Hapus data ${selectedWaterLevelSensor}`}
                                             </p>
                                         </div>
                                     </button>

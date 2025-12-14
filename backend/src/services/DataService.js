@@ -1,13 +1,15 @@
-// Data Service - Connected to MySQL Database
+// Data Service - Connected to MySQL Database with Auto-Fallback
 const mockDataStore = require('./MockDataStore');
 const { Op } = require('sequelize');
+const { shouldUseMockData, isProduction } = require('../config/database');
 
-// Flag to use mock data (set to true to disable database)
-const USE_MOCK_DATA = false;
+// Dynamic check for mock data usage
+const useMockData = () => shouldUseMockData();
 
 const DataService = {
     async getAllData(limit = 100) {
-        console.log('[DataService] getAllData called with limit:', limit);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] getAllData called with limit:', limit, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.findAll({
@@ -24,7 +26,8 @@ const DataService = {
     },
 
     async getDataBySensorId(sensorId, limit = 100) {
-        console.log('[DataService] getDataBySensorId called:', sensorId);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] getDataBySensorId called:', sensorId, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.findAll({
@@ -43,7 +46,8 @@ const DataService = {
     },
 
     async getDataBySensorType(sensorType, limit = 100) {
-        console.log('[DataService] getDataBySensorType called:', sensorType);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] getDataBySensorType called:', sensorType, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.findAll({
@@ -62,7 +66,8 @@ const DataService = {
     },
 
     async getDataByDateRange(startDate, endDate) {
-        console.log('[DataService] getDataByDateRange called');
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] getDataByDateRange called | Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             const allData = await mockDataStore.findAll({
@@ -87,7 +92,8 @@ const DataService = {
     },
 
     async createData(sensorData) {
-        console.log('[DataService] createData called:', sensorData);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] createData called:', sensorData.sensor_id, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.create(sensorData);
@@ -98,7 +104,8 @@ const DataService = {
     },
 
     async deleteData(id) {
-        console.log('[DataService] deleteData called for ID:', id);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] deleteData called for ID:', id, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.destroy({
@@ -113,7 +120,8 @@ const DataService = {
     },
 
     async deleteAllData() {
-        console.log('[DataService] deleteAllData called');
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] deleteAllData called | Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             return await mockDataStore.destroy({
@@ -130,7 +138,8 @@ const DataService = {
     },
 
     async deleteDataBySensorId(sensorId) {
-        console.log('[DataService] deleteDataBySensorId called with ID:', sensorId);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] deleteDataBySensorId called with ID:', sensorId, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             try {
@@ -159,7 +168,8 @@ const DataService = {
     },
 
     async deleteDataBySensorType(sensorType) {
-        console.log('[DataService] deleteDataBySensorType called with type:', sensorType);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] deleteDataBySensorType called with type:', sensorType, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             try {
@@ -188,7 +198,8 @@ const DataService = {
     },
 
     async deleteDataByInterval(intervalSeconds) {
-        console.log('[DataService] deleteDataByInterval called with interval:', intervalSeconds);
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] deleteDataByInterval called with interval:', intervalSeconds, '| Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             const deleted = await mockDataStore.destroy({
@@ -213,6 +224,7 @@ const DataService = {
 
     // Get mock data statistics
     async getStats() {
+        const USE_MOCK_DATA = useMockData();
         if (USE_MOCK_DATA) {
             return mockDataStore.getStats();
         }
@@ -221,7 +233,8 @@ const DataService = {
 
     // Get database status and warnings
     async getDatabaseStatus() {
-        console.log('[DataService] getDatabaseStatus called');
+        const USE_MOCK_DATA = useMockData();
+        console.log('[DataService] getDatabaseStatus called | Using mock:', USE_MOCK_DATA);
 
         if (USE_MOCK_DATA) {
             const stats = mockDataStore.getStats();

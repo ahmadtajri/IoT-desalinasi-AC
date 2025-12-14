@@ -148,12 +148,14 @@ export const LoggerProvider = ({ children }) => {
                 await sensorService.stopLogger();
                 setIsLogging(false);
             } else {
-                // Configure with sensor types if provided
+                // Configure with specific sensors if provided
+                // Values can be: 'all', 'none', or specific sensor ID like 'H1'
                 const config = sensorConfig || {
-                    humidity: true,
-                    temperature: true,
-                    waterLevel: true
+                    humidity: 'all',
+                    temperature: 'all',
+                    waterLevel: 'all'
                 };
+                console.log('[LoggerContext] Starting logger with config:', config);
                 await sensorService.configLogger(logInterval, config);
                 await sensorService.startLogger(config);
                 setIsLogging(true);

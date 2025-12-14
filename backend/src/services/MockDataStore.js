@@ -1,5 +1,6 @@
 // Mock Data Store - In-Memory Database Replacement
 // This replaces MySQL database with in-memory data storage
+// Updated to support new sensor structure (H1-H7, T1-T15, WL1)
 
 class MockDataStore {
     constructor() {
@@ -8,30 +9,65 @@ class MockDataStore {
         this.initializeSampleData();
     }
 
-    // Initialize with sample data
+    // Initialize with sample data using new sensor structure
     initializeSampleData() {
-        console.log('📦 Initializing mock data store...');
+        console.log('📦 Initializing mock data store with new sensor structure...');
 
-        const intervals = [5, 10, 60];
-        const compartments = [1, 2, 3, 4, 5, 6];
+        const humiditySensors = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7'];
+        const temperatureSensors = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12', 'T13', 'T14', 'T15'];
+        const waterLevelSensors = ['WL1'];
+        const intervals = [5, 30, 60];
 
-        // Generate 50 sample records
-        for (let i = 0; i < 50; i++) {
-            const compartment = compartments[Math.floor(Math.random() * compartments.length)];
+        // Generate sample records for each sensor type
+        for (let i = 0; i < 30; i++) {
             const interval = intervals[Math.floor(Math.random() * intervals.length)];
+            const timestamp = new Date(Date.now() - i * 300000).toISOString(); // 5 min apart
 
+            // Add some humidity sensor data
+            const hSensor = humiditySensors[Math.floor(Math.random() * humiditySensors.length)];
             this.data.push({
                 id: this.currentId++,
-                compartment_id: compartment,
-                temperature_air: (25 + Math.random() * 10).toFixed(1),
-                humidity_air: (60 + Math.random() * 20).toFixed(1),
-                temperature_water: (20 + Math.random() * 8).toFixed(1),
+                sensor_id: hSensor,
+                sensor_type: 'humidity',
+                value: parseFloat((50 + Math.random() * 40).toFixed(1)),
+                unit: '%',
+                status: Math.random() > 0.2 ? 'active' : 'inactive',
                 interval: interval,
-                timestamp: new Date(Date.now() - i * 3600000).toISOString()
+                timestamp: timestamp
             });
+
+            // Add some temperature sensor data
+            const tSensor = temperatureSensors[Math.floor(Math.random() * temperatureSensors.length)];
+            this.data.push({
+                id: this.currentId++,
+                sensor_id: tSensor,
+                sensor_type: 'temperature',
+                value: parseFloat((20 + Math.random() * 50).toFixed(1)),
+                unit: '°C',
+                status: Math.random() > 0.2 ? 'active' : 'inactive',
+                interval: interval,
+                timestamp: timestamp
+            });
+
+            // Add some water level data (less frequent)
+            if (i % 3 === 0) {
+                this.data.push({
+                    id: this.currentId++,
+                    sensor_id: 'WL1',
+                    sensor_type: 'waterLevel',
+                    value: parseFloat((10 + Math.random() * 90).toFixed(1)),
+                    unit: '%',
+                    status: 'active',
+                    interval: interval,
+                    timestamp: timestamp
+                });
+            }
         }
 
-        console.log(`✅ Mock data initialized with ${this.data.length} records`);
+        // Sort by timestamp descending (newest first)
+        this.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        console.log('✅ Mock data initialized with ' + this.data.length + ' records');
     }
 
     // Get all data with optional limit
@@ -81,20 +117,24 @@ class MockDataStore {
         return Promise.resolve(result.length);
     }
 
-    // Create new record
+    // Create new record with new sensor structure
     create(data) {
         const newRecord = {
             id: this.currentId++,
-            compartment_id: data.compartment_id,
-            temperature_air: parseFloat(data.temperature_air),
-            humidity_air: parseFloat(data.humidity_air),
-            temperature_water: parseFloat(data.temperature_water),
+            sensor_id: data.sensor_id,
+            sensor_type: data.sensor_type,
+            value: parseFloat(data.value),
+            unit: data.unit || '%',
+            status: data.status || 'active',
             interval: data.interval || null,
             timestamp: new Date().toISOString()
         };
 
         this.data.unshift(newRecord); // Add to beginning (newest first)
-        console.log(`✅ Created new record with ID: ${newRecord.id}`);
+        // Reduce logging noise - only log occasionally
+        if (this.data.length % 10 === 0) {
+            console.log('[MockDataStore] Total records: ' + this.data.length);
+        }
 
         return Promise.resolve(newRecord);
     }
@@ -106,7 +146,7 @@ class MockDataStore {
         if (options.truncate) {
             // Delete all
             this.data = [];
-            console.log(`✅ Deleted all records (${initialLength} total)`);
+            console.log('✅ Deleted all records (' + initialLength + ' total)');
             return Promise.resolve(initialLength);
         }
 
@@ -120,7 +160,7 @@ class MockDataStore {
             });
 
             const deletedCount = beforeLength - this.data.length;
-            console.log(`✅ Deleted ${deletedCount} records`);
+            console.log('✅ Deleted ' + deletedCount + ' records');
             return Promise.resolve(deletedCount);
         }
 
@@ -135,9 +175,13 @@ class MockDataStore {
 
     // Get statistics
     getStats() {
+        const sensorIds = [...new Set(this.data.map(d => d.sensor_id))].sort();
+        const sensorTypes = [...new Set(this.data.map(d => d.sensor_type))];
+
         return {
             totalRecords: this.data.length,
-            compartments: [...new Set(this.data.map(d => d.compartment_id))].sort(),
+            sensorIds: sensorIds,
+            sensorTypes: sensorTypes,
             dateRange: {
                 oldest: this.data[this.data.length - 1]?.timestamp,
                 newest: this.data[0]?.timestamp

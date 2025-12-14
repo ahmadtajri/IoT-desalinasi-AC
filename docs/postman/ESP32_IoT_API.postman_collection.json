@@ -41,7 +41,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"enableHumidity\": true,\n    \"enableTemperature\": true,\n    \"enableWaterLevel\": true\n}"
+                            "raw": "{\n    \"humidity\": \"all\",\n    \"temperature\": \"all\",\n    \"waterLevel\": \"all\"\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/logger/start",
@@ -53,7 +53,7 @@
                                 "start"
                             ]
                         },
-                        "description": "Menyalakan logger background di server. Dapat mengatur sensor mana yang akan direkam."
+                        "description": "Menyalakan logger background di server.\n\nParameter sensor dapat berupa:\n- \"all\" - rekam semua sensor dalam tipe tersebut\n- \"none\" - jangan rekam tipe sensor ini\n- \"H1\", \"T5\", \"WL1\" - rekam sensor spesifik saja"
                     },
                     "response": []
                 },
@@ -89,7 +89,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"interval\": 5000,\n    \"enableHumidity\": true,\n    \"enableTemperature\": true,\n    \"enableWaterLevel\": true\n}"
+                            "raw": "{\n    \"interval\": 5000,\n    \"humidity\": \"all\",\n    \"temperature\": \"all\",\n    \"waterLevel\": \"all\"\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/logger/config",
@@ -101,7 +101,7 @@
                                 "config"
                             ]
                         },
-                        "description": "Mengubah konfigurasi logger:\n- interval: Dalam milidetik (5000, 30000, 60000)\n- enableHumidity: true/false\n- enableTemperature: true/false\n- enableWaterLevel: true/false"
+                        "description": "Mengubah konfigurasi logger:\n- interval: Dalam milidetik (5000, 30000, 60000)\n- humidity: \"all\" / \"none\" / \"H1\" s/d \"H7\"\n- temperature: \"all\" / \"none\" / \"T1\" s/d \"T15\"\n- waterLevel: \"all\" / \"none\" / \"WL1\""
                     },
                     "response": []
                 }

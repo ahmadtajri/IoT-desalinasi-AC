@@ -57,11 +57,12 @@ const sensorService = {
         return response.data;
     },
 
+    // sensorConfig format: { humidity: 'all'|'none'|'H1', temperature: 'all'|'none'|'T5', waterLevel: 'all'|'none'|'WL1' }
     async startLogger(sensorConfig = {}) {
         const response = await api.post('/logger/start', {
-            enableHumidity: sensorConfig.humidity !== false,
-            enableTemperature: sensorConfig.temperature !== false,
-            enableWaterLevel: sensorConfig.waterLevel !== false
+            humidity: sensorConfig.humidity || 'all',
+            temperature: sensorConfig.temperature || 'all',
+            waterLevel: sensorConfig.waterLevel || 'all'
         });
         return response.data;
     },
@@ -74,9 +75,9 @@ const sensorService = {
     async configLogger(interval, sensorConfig = null) {
         const config = { interval };
         if (sensorConfig) {
-            config.enableHumidity = sensorConfig.humidity !== false;
-            config.enableTemperature = sensorConfig.temperature !== false;
-            config.enableWaterLevel = sensorConfig.waterLevel !== false;
+            config.humidity = sensorConfig.humidity;
+            config.temperature = sensorConfig.temperature;
+            config.waterLevel = sensorConfig.waterLevel;
         }
         const response = await api.post('/logger/config', config);
         return response.data;
