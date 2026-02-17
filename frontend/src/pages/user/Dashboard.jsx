@@ -85,6 +85,21 @@ const Dashboard = () => {
     const allWaterTempSensors = getSensorsByType('water_temperature');
     const allWaterLevelSensors = getSensorsByType('water_level');
 
+    // Auto-select first available sensor when config changes
+    // Fixes bug where hardcoded defaults (e.g. 'T8') don't match actual config
+    useEffect(() => {
+        if (allHumiditySensors.length > 0) {
+            setSelectedHumidity(prev => allHumiditySensors.includes(prev) ? prev : allHumiditySensors[0]);
+        }
+        if (allAirTempSensors.length > 0) {
+            setSelectedAirTemp(prev => allAirTempSensors.includes(prev) ? prev : allAirTempSensors[0]);
+        }
+        if (allWaterTempSensors.length > 0) {
+            setSelectedWaterTemp(prev => allWaterTempSensors.includes(prev) ? prev : allWaterTempSensors[0]);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allSensorConfigs]);
+
     // Options for dropdown - now fully dynamic from sensor config
     const humidityOptions = allHumiditySensors.map(id => ({
         value: id,

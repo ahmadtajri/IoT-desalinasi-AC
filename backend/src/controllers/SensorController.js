@@ -212,6 +212,27 @@ const SensorController = {
                 sensorStatus.waterLevel[sensorId] = data.status === 'active';
             }
 
+            // Process generic sensors cache (from esp32/sensors topic)
+            // Categorize based on admin-configured sensorType, skip if already added from specific caches
+            for (const [sensorId, data] of Object.entries(cache.sensors || {})) {
+                const configuredType = sensorTypeMap[sensorId];
+                if (!configuredType) continue; // unconfigured sensor, skip
+
+                if (configuredType === 'humidity' && !(sensorId in realtimeData.humidity)) {
+                    realtimeData.humidity[sensorId] = data.value;
+                    sensorStatus.humidity[sensorId] = data.status === 'active';
+                } else if (configuredType === 'air_temperature' && !(sensorId in realtimeData.airTemperature)) {
+                    realtimeData.airTemperature[sensorId] = data.value;
+                    sensorStatus.airTemperature[sensorId] = data.status === 'active';
+                } else if (configuredType === 'water_temperature' && !(sensorId in realtimeData.waterTemperature)) {
+                    realtimeData.waterTemperature[sensorId] = data.value;
+                    sensorStatus.waterTemperature[sensorId] = data.status === 'active';
+                } else if (configuredType === 'water_level' && !(sensorId in realtimeData.waterLevel)) {
+                    realtimeData.waterLevel[sensorId] = data.value;
+                    sensorStatus.waterLevel[sensorId] = data.status === 'active';
+                }
+            }
+
             res.json({
                 realtimeData,
                 sensorStatus,
