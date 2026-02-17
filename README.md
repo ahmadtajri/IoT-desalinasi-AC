@@ -12,10 +12,11 @@ Web-based monitoring system for desalination process, featuring real-time data v
 ## 🚀 Key Features
 
 *   **Real-time Monitoring**: Live updates of Air Temperature, Humidity, and Water Temperature.
+*   **Valve Control System**: Remote control of water valve with AUTO/MANUAL modes via MQTT.
 *   **Background Logging**: Server-side data logging that continues even when the browser is closed.
-*   **Multi-Compartment Support**: Simultaneous monitoring of up to 6 distinct compartments.
+*   **Multi-Sensor Support**: Dynamic sensor configuration with flexible categorization.
 *   **Historical Reports**: View, filter, and export sensor data to CSV.
-*   **Hardware Integration**: Direct integration with ESP32 microcontrollers via REST API.
+*   **Hardware Integration**: Direct integration with ESP32 microcontrollers via MQTT protocol.
 *   **Dual Mode**:
     *   **Production**: Persist data to MySQL database.
     *   **Development**: Auto-fallback to Mock Data when database is unavailable.
@@ -98,6 +99,9 @@ Detailed documentation is available in the `docs/` folder:
 *   📖 **[Project Overview](docs/PROJECT_DOCUMENTATION.md)** - Complete system architecture.
 *   🔌 **[Backend & API](docs/backend/BACKEND_DOCUMENTATION.md)** - API endpoints and logic.
 *   📡 **[ESP32 Hardware Guide](docs/esp32/ESP32_DOCUMENTATION.md)** - Wiring and code setup.
+*   🎮 **[Valve Control System](docs/VALVE_CONTROL_GUIDE.md)** - Complete guide for valve control with MQTT.
+*   🔧 **[Valve Control Integration](docs/VALVE_CONTROL_INTEGRATION.md)** - How to add valve control to dashboard.
+*   📊 **[Valve Control Summary](docs/VALVE_CONTROL_SUMMARY.md)** - Quick overview of valve control system.
 *   🧪 **[Postman Guide](docs/postman/POSTMAN_GUIDE.md)** - API testing guide.
 
 ---

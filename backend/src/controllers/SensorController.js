@@ -1,17 +1,39 @@
+const { PrismaClient } = require('@prisma/client');
 const DataService = require('../services/DataService');
+
+const prisma = new PrismaClient();
+const SENSOR_CONFIG_TTL_MS = 5000;
+let sensorConfigCache = { map: {}, fetchedAt: 0 };
+
+const getSensorTypeMap = async () => {
+    const now = Date.now();
+    if (now - sensorConfigCache.fetchedAt < SENSOR_CONFIG_TTL_MS) {
+        return sensorConfigCache.map;
+    }
+
+    const configs = await prisma.sensorConfig.findMany({
+        select: { sensorId: true, sensorType: true, isEnabled: true }
+    });
+
+    const map = {};
+    for (const cfg of configs) {
+        map[cfg.sensorId] = cfg.sensorType;
+    }
+
+    sensorConfigCache = { map, fetchedAt: now };
+    return map;
+};
 
 const SensorController = {
     async getAll(req, res) {
         try {
-            const { limit, sensorId, sensorType, startDate, endDate } = req.query;
+            const { limit, sensorId, sensorType } = req.query;
 
             let data;
             if (sensorId && sensorId !== 'all') {
                 data = await DataService.getDataBySensorId(sensorId, limit || 100);
             } else if (sensorType && sensorType !== 'all') {
                 data = await DataService.getDataBySensorType(sensorType, limit || 100);
-            } else if (startDate && endDate) {
-                data = await DataService.getDataByDateRange(new Date(startDate), new Date(endDate));
             } else {
                 data = await DataService.getAllData(limit || 100);
             }
@@ -53,21 +75,6 @@ const SensorController = {
         }
     },
 
-    async delete(req, res) {
-        try {
-            const { id } = req.params;
-            const deleted = await DataService.deleteData(id);
-            if (deleted) {
-                res.json({ message: 'Data deleted successfully' });
-            } else {
-                res.status(404).json({ error: 'Data not found' });
-            }
-        } catch (error) {
-            console.error('Error in delete:', error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
     async deleteAll(req, res) {
         try {
             await DataService.deleteAllData();
@@ -78,58 +85,51 @@ const SensorController = {
         }
     },
 
-    async deleteBySensorId(req, res) {
+    async deleteByFilter(req, res) {
         try {
-            const { sensorId } = req.params;
-            console.log('deleteBySensorId called with sensorId:', sensorId);
+            const { sensorTypes, sensorIds } = req.body;
 
-            if (!sensorId) {
+            // Validation: at least one filter must be provided
+            if ((!sensorTypes || sensorTypes.length === 0) && (!sensorIds || sensorIds.length === 0)) {
                 return res.status(400).json({
-                    error: 'Invalid sensor ID',
-                    received: sensorId
+                    error: 'At least one filter (sensorTypes or sensorIds) must be provided'
                 });
             }
 
-            console.log('Attempting to delete data for sensor:', sensorId);
-            const deleted = await DataService.deleteDataBySensorId(sensorId);
-            console.log('Delete operation completed. Rows affected:', deleted);
+            console.log('deleteByFilter called with:', { sensorTypes, sensorIds });
 
-            res.json({
-                success: true,
-                message: `All data for sensor ${sensorId} deleted successfully`,
-                deletedCount: deleted
-            });
-        } catch (error) {
-            console.error('Error in deleteBySensorId:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message,
-                details: error.stack
-            });
-        }
-    },
+            // Build where clause for Prisma
+            const whereClause = {};
+            const orConditions = [];
 
-    async deleteBySensorType(req, res) {
-        try {
-            const { sensorType } = req.params;
-            console.log('deleteBySensorType called with type:', sensorType);
-
-            const validTypes = ['humidity', 'temperature', 'waterLevel'];
-            if (!validTypes.includes(sensorType)) {
-                return res.status(400).json({
-                    error: 'Invalid sensor type. Must be: humidity, temperature, or waterLevel',
-                    received: sensorType
+            // Add sensorType conditions
+            if (sensorTypes && sensorTypes.length > 0) {
+                sensorTypes.forEach(type => {
+                    orConditions.push({ sensorType: type });
                 });
             }
 
-            const deleted = await DataService.deleteDataBySensorType(sensorType);
+            // Add sensorId conditions
+            if (sensorIds && sensorIds.length > 0) {
+                sensorIds.forEach(id => {
+                    orConditions.push({ sensorId: id });
+                });
+            }
+
+            // Use OR condition if multiple filters
+            if (orConditions.length > 0) {
+                whereClause.OR = orConditions;
+            }
+
+            const result = await DataService.deleteByFilter(whereClause);
+
             res.json({
                 success: true,
-                message: `All data for sensor type ${sensorType} deleted successfully`,
-                deletedCount: deleted
+                message: `Successfully deleted ${result.count} records`,
+                deletedCount: result.count
             });
         } catch (error) {
-            console.error('Error in deleteBySensorType:', error);
+            console.error('Error in deleteByFilter:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -137,23 +137,19 @@ const SensorController = {
         }
     },
 
-    async deleteByInterval(req, res) {
+    async deleteById(req, res) {
         try {
-            const { interval } = req.params;
-            const intervalSeconds = parseInt(interval);
-
-            if (isNaN(intervalSeconds) || intervalSeconds < 0) {
-                return res.status(400).json({ error: 'Invalid interval' });
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ error: 'Missing record ID' });
             }
-
-            const deleted = await DataService.deleteDataByInterval(intervalSeconds);
-            res.json({
-                success: true,
-                message: `Data with interval ${intervalSeconds}s deleted successfully`,
-                deletedCount: deleted
-            });
+            await DataService.deleteById(id);
+            res.json({ success: true, message: `Record ${id} deleted successfully` });
         } catch (error) {
-            console.error('Error in deleteByInterval:', error);
+            console.error('Error in deleteById:', error);
+            if (error.code === 'P2025') {
+                return res.status(404).json({ error: 'Record not found' });
+            }
             res.status(500).json({ error: error.message });
         }
     },
@@ -164,6 +160,69 @@ const SensorController = {
             res.json(status);
         } catch (error) {
             console.error('Error in getDatabaseStatus:', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    async getRealtimeData(req, res) {
+        try {
+            // Get data from ESP32 cache (real-time data from ESP32 devices)
+            const ESP32Controller = require('./ESP32Controller');
+            const cache = ESP32Controller.getCache();
+            const sensorTypeMap = await getSensorTypeMap();
+
+            // Organize data for frontend consumption
+            const realtimeData = {
+                humidity: {},
+                airTemperature: {},
+                waterTemperature: {},
+                waterLevel: {}
+            };
+
+            const sensorStatus = {
+                humidity: {},
+                airTemperature: {},
+                waterTemperature: {},
+                waterLevel: {}
+            };
+
+            // Process humidity data from ESP32 cache (only if configured as humidity)
+            for (const [sensorId, data] of Object.entries(cache.humidity || {})) {
+                if (sensorTypeMap[sensorId] !== 'humidity') continue;
+                realtimeData.humidity[sensorId] = data.value;
+                sensorStatus.humidity[sensorId] = data.status === 'active';
+            }
+
+            // Process temperature data (categorize by admin-configured sensorType)
+            for (const [sensorId, data] of Object.entries(cache.temperature || {})) {
+                const configuredType = sensorTypeMap[sensorId];
+                if (configuredType === 'air_temperature') {
+                    realtimeData.airTemperature[sensorId] = data.value;
+                    sensorStatus.airTemperature[sensorId] = data.status === 'active';
+                } else if (configuredType === 'water_temperature') {
+                    realtimeData.waterTemperature[sensorId] = data.value;
+                    sensorStatus.waterTemperature[sensorId] = data.status === 'active';
+                }
+            }
+
+            // Process water level data (only if configured as water_level)
+            for (const [sensorId, data] of Object.entries(cache.waterLevel || {})) {
+                if (sensorTypeMap[sensorId] !== 'water_level') continue;
+                realtimeData.waterLevel[sensorId] = data.value;
+                sensorStatus.waterLevel[sensorId] = data.status === 'active';
+            }
+
+            res.json({
+                realtimeData,
+                sensorStatus,
+                pumpStatus: cache.valveStatus?.status === 'open', // Valve open = pump on
+                valveStatus: cache.valveStatus || null, // Send full valve status object
+                waterWeight: cache.waterWeight?.WW1?.value ?? null, // Get WW1 value if available
+                lastUpdate: cache.lastUpdate,
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Error in getRealtimeData:', error);
             res.status(500).json({ error: error.message });
         }
     }

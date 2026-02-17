@@ -21,28 +21,18 @@ const sensorService = {
         return response.data;
     },
 
-    async delete(id) {
-        const response = await api.delete(`/sensors/${id}`);
-        return response.data;
-    },
-
     async deleteAll() {
         const response = await api.delete('/sensors');
         return response.data;
     },
 
-    async deleteBySensorId(sensorId) {
-        const response = await api.delete(`/sensors/sensor/${sensorId}`);
+    async deleteById(id) {
+        const response = await api.delete(`/sensors/${id}`);
         return response.data;
     },
 
-    async deleteBySensorType(sensorType) {
-        const response = await api.delete(`/sensors/type/${sensorType}`);
-        return response.data;
-    },
-
-    async deleteByInterval(interval) {
-        const response = await api.delete(`/sensors/interval/${interval}`);
+    async deleteByFilter(filterParams) {
+        const response = await api.delete('/sensors/filtered', { data: filterParams });
         return response.data;
     },
 
@@ -51,19 +41,26 @@ const sensorService = {
         return response.data;
     },
 
-    // Backend Logger Control
+    async getRealtimeData() {
+        const response = await api.get('/sensors/realtime');
+        return response.data;
+    },
+
+    // Backend Logger Control (per-user)
     async getLoggerStatus() {
         const response = await api.get('/logger/status');
         return response.data;
     },
 
-    // sensorConfig format: { humidity: 'all'|'none'|'H1', temperature: 'all'|'none'|'T5', waterLevel: 'all'|'none'|'WL1' }
-    async startLogger(sensorConfig = {}) {
-        const response = await api.post('/logger/start', {
+    // sensorConfig format: { humidity: 'all'|'none', airTemperature: 'all'|'none', waterTemperature: 'all'|'none' }
+    async startLogger(sensorConfig = {}, intervalMs = null) {
+        const body = {
             humidity: sensorConfig.humidity || 'all',
-            temperature: sensorConfig.temperature || 'all',
-            waterLevel: sensorConfig.waterLevel || 'all'
-        });
+            airTemperature: sensorConfig.airTemperature || 'all',
+            waterTemperature: sensorConfig.waterTemperature || 'all'
+        };
+        if (intervalMs) body.interval = intervalMs;
+        const response = await api.post('/logger/start', body);
         return response.data;
     },
 
@@ -76,10 +73,28 @@ const sensorService = {
         const config = { interval };
         if (sensorConfig) {
             config.humidity = sensorConfig.humidity;
-            config.temperature = sensorConfig.temperature;
-            config.waterLevel = sensorConfig.waterLevel;
+            config.airTemperature = sensorConfig.airTemperature;
+            config.waterTemperature = sensorConfig.waterTemperature;
         }
         const response = await api.post('/logger/config', config);
+        return response.data;
+    },
+
+    // Admin: get all active loggers
+    async getAllLoggerStatus() {
+        const response = await api.get('/logger/all');
+        return response.data;
+    },
+
+    // Admin: stop all loggers
+    async stopAllLoggers() {
+        const response = await api.post('/logger/stop-all');
+        return response.data;
+    },
+
+    // Admin: stop specific user's logger
+    async stopLoggerForUser(userId) {
+        const response = await api.post(`/logger/stop/${userId}`);
         return response.data;
     },
 

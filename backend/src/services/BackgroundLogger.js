@@ -1,131 +1,178 @@
+const { PrismaClient } = require('@prisma/client');
 const DataService = require('./DataService');
 
-class BackgroundLogger {
-    constructor() {
+const prisma = new PrismaClient();
+const SENSOR_CONFIG_TTL_MS = 5000;
+let sensorConfigCache = { map: {}, fetchedAt: 0 };
+
+const getSensorTypeMap = async () => {
+    const now = Date.now();
+    if (now - sensorConfigCache.fetchedAt < SENSOR_CONFIG_TTL_MS) {
+        return sensorConfigCache.map;
+    }
+
+    const configs = await prisma.sensorConfig.findMany({
+        where: { isEnabled: true },
+        select: { sensorId: true, sensorType: true }
+    });
+
+    const map = {};
+    for (const cfg of configs) {
+        map[cfg.sensorId] = cfg.sensorType;
+    }
+
+    sensorConfigCache = { map, fetchedAt: now };
+    return map;
+};
+
+const getSensorIdsByType = (map, type) => {
+    return Object.entries(map)
+        .filter(([, sensorType]) => sensorType === type)
+        .map(([sensorId]) => sensorId);
+};
+
+// ============================================================
+// Individual User Logger - one instance per user
+// ============================================================
+class UserLogger {
+    constructor(userId, username) {
+        this.userId = userId;
+        this.username = username || `User#${userId}`;
         this.isLogging = false;
-        this.interval = 5000; // Default 5 seconds
+        this.interval = 5000;
         this.timer = null;
         this.logCount = 0;
+        this.nextRunTime = null;
+        this.startTime = null;
 
-        // Default sensor configuration - which sensors to log
-        this.allSensors = {
-            humidity: ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7'],
-            temperature: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12', 'T13', 'T14', 'T15'],
-            waterLevel: ['WL1']
-        };
-
-        // Active sensors to record (can be specific sensors or 'all')
-        this.activeSensors = {
-            humidity: ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7'], // Default: all
-            temperature: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12', 'T13', 'T14', 'T15'],
-            waterLevel: ['WL1']
-        };
-
-        // Which sensor types are enabled
         this.enabledSensorTypes = {
             humidity: true,
-            temperature: true,
-            waterLevel: true
+            airTemperature: true,
+            waterTemperature: true
         };
     }
 
     start() {
         if (this.isLogging) {
-            console.log('[BackgroundLogger] Already running.');
-            return;
+            return { success: false, message: 'Logger sudah berjalan untuk user ini' };
+        }
+
+        const hasAnySensorEnabled =
+            this.enabledSensorTypes.humidity ||
+            this.enabledSensorTypes.airTemperature ||
+            this.enabledSensorTypes.waterTemperature;
+
+        if (!hasAnySensorEnabled) {
+            return {
+                success: false,
+                message: 'Tidak bisa memulai logger: Tidak ada sensor yang dipilih.'
+            };
         }
 
         this.isLogging = true;
         this.logCount = 0;
-        console.log(`[BackgroundLogger] Started with interval ${this.interval}ms`);
-        console.log(`[BackgroundLogger] Active Humidity Sensors: ${this.activeSensors.humidity.join(', ') || 'NONE'}`);
-        console.log(`[BackgroundLogger] Active Temperature Sensors: ${this.activeSensors.temperature.join(', ') || 'NONE'}`);
-        console.log(`[BackgroundLogger] Active Water Level Sensors: ${this.activeSensors.waterLevel.join(', ') || 'NONE'}`);
+        this.startTime = Date.now();
+        console.log(`[Logger:${this.username}] Started with interval ${this.interval}ms`);
+        console.log(`[Logger:${this.username}] Enabled: humidity=${this.enabledSensorTypes.humidity}, airTemp=${this.enabledSensorTypes.airTemperature}, waterTemp=${this.enabledSensorTypes.waterTemperature}`);
 
-        this.timer = setInterval(() => this.runCycle(), this.interval);
+        this._scheduleNextCycle();
+        return { success: true, message: 'Logger started successfully' };
+    }
+
+    _scheduleNextCycle() {
+        if (!this.isLogging) return;
+
+        const now = Date.now();
+
+        if (this.nextRunTime === null) {
+            this.nextRunTime = now + this.interval;
+        }
+
+        const delay = Math.max(0, this.nextRunTime - now);
+
+        this.timer = setTimeout(async () => {
+            if (!this.isLogging) return;
+
+            await this.runCycle();
+
+            this.nextRunTime += this.interval;
+
+            const nowAfterCycle = Date.now();
+            if (this.nextRunTime <= nowAfterCycle) {
+                console.log(`[Logger:${this.username}] Cycle took longer than interval, adjusting.`);
+                this.nextRunTime = nowAfterCycle + this.interval;
+            }
+
+            this._scheduleNextCycle();
+        }, delay);
     }
 
     stop() {
         if (!this.isLogging) return;
 
         this.isLogging = false;
-        clearInterval(this.timer);
+        clearTimeout(this.timer);
         this.timer = null;
-        console.log('[BackgroundLogger] Stopped.');
+        this.nextRunTime = null;
+        this.startTime = null;
+        console.log(`[Logger:${this.username}] Stopped.`);
     }
 
     setIntervalTime(ms) {
+        if (this.interval === ms) return;
+
+        const oldInterval = this.interval;
         this.interval = ms;
+
         if (this.isLogging) {
-            clearInterval(this.timer);
-            this.timer = setInterval(() => this.runCycle(), this.interval);
-            console.log(`[BackgroundLogger] Interval updated to ${this.interval}ms`);
+            const now = Date.now();
+            const timeUntilNextRun = this.nextRunTime - now;
+            const elapsedInCurrentCycle = oldInterval - timeUntilNextRun;
+
+            if (elapsedInCurrentCycle >= ms) {
+                this.nextRunTime = now;
+            } else {
+                this.nextRunTime = now + (ms - elapsedInCurrentCycle);
+            }
+
+            clearTimeout(this.timer);
+            this._scheduleNextCycle();
+            console.log(`[Logger:${this.username}] Interval updated ${oldInterval}ms -> ${ms}ms`);
         }
     }
 
-    // Configure which sensors to record
-    // sensorConfig format: { humidity: 'all'|'none'|'H1', temperature: 'all'|'none'|'T5', waterLevel: 'all'|'none'|'WL1' }
     setSensorConfig(sensorConfig) {
-        console.log('[BackgroundLogger] Configuring sensors:', sensorConfig);
-
-        // Process humidity
         if (sensorConfig.humidity === 'none' || sensorConfig.humidity === false) {
             this.enabledSensorTypes.humidity = false;
-            this.activeSensors.humidity = [];
         } else if (sensorConfig.humidity === 'all' || sensorConfig.humidity === true) {
             this.enabledSensorTypes.humidity = true;
-            this.activeSensors.humidity = [...this.allSensors.humidity];
-        } else if (typeof sensorConfig.humidity === 'string') {
-            // Specific sensor like 'H1'
-            this.enabledSensorTypes.humidity = true;
-            this.activeSensors.humidity = [sensorConfig.humidity];
         }
 
-        // Process temperature
-        if (sensorConfig.temperature === 'none' || sensorConfig.temperature === false) {
-            this.enabledSensorTypes.temperature = false;
-            this.activeSensors.temperature = [];
-        } else if (sensorConfig.temperature === 'all' || sensorConfig.temperature === true) {
-            this.enabledSensorTypes.temperature = true;
-            this.activeSensors.temperature = [...this.allSensors.temperature];
-        } else if (typeof sensorConfig.temperature === 'string') {
-            // Specific sensor like 'T5'
-            this.enabledSensorTypes.temperature = true;
-            this.activeSensors.temperature = [sensorConfig.temperature];
+        if (sensorConfig.airTemperature === 'none' || sensorConfig.airTemperature === false) {
+            this.enabledSensorTypes.airTemperature = false;
+        } else if (sensorConfig.airTemperature === 'all' || sensorConfig.airTemperature === true) {
+            this.enabledSensorTypes.airTemperature = true;
         }
 
-        // Process water level
-        if (sensorConfig.waterLevel === 'none' || sensorConfig.waterLevel === false) {
-            this.enabledSensorTypes.waterLevel = false;
-            this.activeSensors.waterLevel = [];
-        } else if (sensorConfig.waterLevel === 'all' || sensorConfig.waterLevel === true) {
-            this.enabledSensorTypes.waterLevel = true;
-            this.activeSensors.waterLevel = [...this.allSensors.waterLevel];
-        } else if (typeof sensorConfig.waterLevel === 'string') {
-            // Specific sensor like 'WL1'
-            this.enabledSensorTypes.waterLevel = true;
-            this.activeSensors.waterLevel = [sensorConfig.waterLevel];
+        if (sensorConfig.waterTemperature === 'none' || sensorConfig.waterTemperature === false) {
+            this.enabledSensorTypes.waterTemperature = false;
+        } else if (sensorConfig.waterTemperature === 'all' || sensorConfig.waterTemperature === true) {
+            this.enabledSensorTypes.waterTemperature = true;
         }
 
-        console.log(`[BackgroundLogger] Updated - H: [${this.activeSensors.humidity.join(',')}], T: [${this.activeSensors.temperature.join(',')}], WL: [${this.activeSensors.waterLevel.join(',')}]`);
-    }
-
-    // Legacy method for backwards compatibility
-    setSensorTypes(humidity = true, temperature = true, waterLevel = true) {
-        this.setSensorConfig({
-            humidity: humidity ? 'all' : 'none',
-            temperature: temperature ? 'all' : 'none',
-            waterLevel: waterLevel ? 'all' : 'none'
-        });
+        console.log(`[Logger:${this.username}] Sensors: humidity=${this.enabledSensorTypes.humidity}, airTemp=${this.enabledSensorTypes.airTemperature}, waterTemp=${this.enabledSensorTypes.waterTemperature}`);
     }
 
     getStatus() {
         return {
+            userId: this.userId,
+            username: this.username,
             isLogging: this.isLogging,
             interval: this.interval,
             logCount: this.logCount,
-            enabledSensorTypes: this.enabledSensorTypes,
-            activeSensors: this.activeSensors
+            enabledSensorTypes: { ...this.enabledSensorTypes },
+            nextRunTime: this.nextRunTime,
+            startTime: this.startTime
         };
     }
 
@@ -133,75 +180,205 @@ class BackgroundLogger {
         try {
             const intervalSeconds = Math.floor(this.interval / 1000);
             let recordsCreated = 0;
+            const cycleTimestamp = new Date();
 
-            // Log Humidity Sensors (only active ones)
-            if (this.enabledSensorTypes.humidity && this.activeSensors.humidity.length > 0) {
-                for (const sensorId of this.activeSensors.humidity) {
-                    // Simulate: H1-H4 always active, H5-H7 70% chance active
-                    const sensorNum = parseInt(sensorId.substring(1));
-                    const isActive = sensorNum <= 4 ? true : Math.random() > 0.3;
+            const ESP32Controller = require('../controllers/ESP32Controller');
+            const cache = ESP32Controller.getCache();
+            const sensorTypeMap = await getSensorTypeMap();
 
-                    if (isActive) {
-                        const sensorData = {
+            const humiditySensors = this.enabledSensorTypes.humidity
+                ? getSensorIdsByType(sensorTypeMap, 'humidity') : [];
+            const airTempSensors = this.enabledSensorTypes.airTemperature
+                ? getSensorIdsByType(sensorTypeMap, 'air_temperature') : [];
+            const waterTempSensors = this.enabledSensorTypes.waterTemperature
+                ? getSensorIdsByType(sensorTypeMap, 'water_temperature') : [];
+
+            // Log Humidity
+            if (this.enabledSensorTypes.humidity && humiditySensors.length > 0) {
+                for (const sensorId of humiditySensors) {
+                    const cachedData = cache.humidity?.[sensorId];
+                    if (cachedData && cachedData.value !== null && cachedData.value !== undefined) {
+                        await DataService.createData({
                             sensor_id: sensorId,
                             sensor_type: 'humidity',
-                            value: parseFloat((50 + Math.random() * 40).toFixed(1)), // 50-90%
+                            value: parseFloat(cachedData.value.toFixed(2)),
                             unit: '%',
-                            status: 'active',
-                            interval: intervalSeconds
-                        };
-                        await DataService.createData(sensorData);
+                            status: cachedData.status || 'active',
+                            interval: intervalSeconds,
+                            timestamp: cycleTimestamp
+                        }, this.userId);
                         recordsCreated++;
                     }
                 }
             }
 
-            // Log Temperature Sensors (only active ones)
-            if (this.enabledSensorTypes.temperature && this.activeSensors.temperature.length > 0) {
-                for (const sensorId of this.activeSensors.temperature) {
-                    // Simulate: T1-T8 always active, T9-T15 60% chance active
-                    const sensorNum = parseInt(sensorId.substring(1));
-                    const isActive = sensorNum <= 8 ? true : Math.random() > 0.4;
-
-                    if (isActive) {
-                        const sensorData = {
+            // Log Air Temperature
+            if (this.enabledSensorTypes.airTemperature && airTempSensors.length > 0) {
+                for (const sensorId of airTempSensors) {
+                    const cachedData = cache.temperature?.[sensorId];
+                    if (cachedData && cachedData.value !== null && cachedData.value !== undefined) {
+                        await DataService.createData({
                             sensor_id: sensorId,
-                            sensor_type: 'temperature',
-                            value: parseFloat((20 + Math.random() * 50).toFixed(1)), // 20-70°C
+                            sensor_type: 'air_temperature',
+                            value: parseFloat(cachedData.value.toFixed(2)),
                             unit: '°C',
-                            status: 'active',
-                            interval: intervalSeconds
-                        };
-                        await DataService.createData(sensorData);
+                            status: cachedData.status || 'active',
+                            interval: intervalSeconds,
+                            timestamp: cycleTimestamp
+                        }, this.userId);
                         recordsCreated++;
                     }
                 }
             }
 
-            // Log Water Level Sensor (only if active)
-            if (this.enabledSensorTypes.waterLevel && this.activeSensors.waterLevel.length > 0) {
-                for (const sensorId of this.activeSensors.waterLevel) {
-                    const sensorData = {
-                        sensor_id: sensorId,
-                        sensor_type: 'waterLevel',
-                        value: parseFloat((10 + Math.random() * 90).toFixed(1)), // 10-100%
-                        unit: '%',
-                        status: 'active',
-                        interval: intervalSeconds
-                    };
-                    await DataService.createData(sensorData);
-                    recordsCreated++;
+            // Log Water Temperature
+            if (this.enabledSensorTypes.waterTemperature && waterTempSensors.length > 0) {
+                for (const sensorId of waterTempSensors) {
+                    const cachedData = cache.temperature?.[sensorId];
+                    if (cachedData && cachedData.value !== null && cachedData.value !== undefined) {
+                        await DataService.createData({
+                            sensor_id: sensorId,
+                            sensor_type: 'water_temperature',
+                            value: parseFloat(cachedData.value.toFixed(2)),
+                            unit: '°C',
+                            status: cachedData.status || 'active',
+                            interval: intervalSeconds,
+                            timestamp: cycleTimestamp
+                        }, this.userId);
+                        recordsCreated++;
+                    }
                 }
             }
 
             this.logCount++;
-            console.log(`[BackgroundLogger] Cycle #${this.logCount} completed. ${recordsCreated} records saved.`);
+            const cycleTime = Date.now() - cycleTimestamp.getTime();
+            console.log(`[Logger:${this.username}] Cycle #${this.logCount} | ${recordsCreated} records | ${cycleTime}ms`);
         } catch (error) {
-            console.error('[BackgroundLogger] Error in logging cycle:', error);
+            console.error(`[Logger:${this.username}] Error in cycle:`, error);
         }
     }
 }
 
-// Singleton instance
-const loggerInstance = new BackgroundLogger();
-module.exports = loggerInstance;
+// ============================================================
+// User Logger Manager - manages all per-user logger instances
+// ============================================================
+class UserLoggerManager {
+    constructor() {
+        /** @type {Map<number, UserLogger>} */
+        this.loggers = new Map();
+    }
+
+    /**
+     * Get or create a logger for a specific user
+     */
+    _getOrCreate(userId, username) {
+        if (!this.loggers.has(userId)) {
+            this.loggers.set(userId, new UserLogger(userId, username));
+        }
+        return this.loggers.get(userId);
+    }
+
+    /**
+     * Start logger for a specific user
+     */
+    startForUser(userId, username, intervalMs, sensorConfig) {
+        const logger = this._getOrCreate(userId, username);
+
+        if (intervalMs) logger.setIntervalTime(intervalMs);
+        if (sensorConfig) logger.setSensorConfig(sensorConfig);
+
+        const result = logger.start();
+        console.log(`[LoggerManager] Active loggers: ${this.getActiveCount()}/${this.loggers.size}`);
+        return result;
+    }
+
+    /**
+     * Stop logger for a specific user
+     */
+    stopForUser(userId) {
+        const logger = this.loggers.get(userId);
+        if (logger) {
+            logger.stop();
+            console.log(`[LoggerManager] Active loggers: ${this.getActiveCount()}/${this.loggers.size}`);
+        }
+    }
+
+    /**
+     * Update config for a specific user's logger
+     */
+    configForUser(userId, username, intervalMs, sensorConfig) {
+        const logger = this._getOrCreate(userId, username);
+
+        if (intervalMs && typeof intervalMs === 'number') {
+            logger.setIntervalTime(intervalMs);
+        }
+        if (sensorConfig) {
+            logger.setSensorConfig(sensorConfig);
+        }
+
+        return logger.getStatus();
+    }
+
+    /**
+     * Get status for a specific user
+     */
+    getStatusForUser(userId) {
+        const logger = this.loggers.get(userId);
+        if (!logger) {
+            return {
+                userId,
+                isLogging: false,
+                interval: 5000,
+                logCount: 0,
+                enabledSensorTypes: {
+                    humidity: true,
+                    airTemperature: true,
+                    waterTemperature: true
+                },
+                nextRunTime: null,
+                startTime: null
+            };
+        }
+        return logger.getStatus();
+    }
+
+    /**
+     * Get status of all loggers (admin view)
+     */
+    getAllStatus() {
+        const statuses = [];
+        for (const [, logger] of this.loggers) {
+            statuses.push(logger.getStatus());
+        }
+        return {
+            totalLoggers: this.loggers.size,
+            activeLoggers: this.getActiveCount(),
+            loggers: statuses
+        };
+    }
+
+    /**
+     * Stop all loggers (e.g., on server shutdown)
+     */
+    stopAll() {
+        for (const [, logger] of this.loggers) {
+            logger.stop();
+        }
+        console.log('[LoggerManager] All loggers stopped.');
+    }
+
+    /**
+     * Get count of currently active loggers
+     */
+    getActiveCount() {
+        let count = 0;
+        for (const [, logger] of this.loggers) {
+            if (logger.isLogging) count++;
+        }
+        return count;
+    }
+}
+
+// Singleton manager instance
+const loggerManager = new UserLoggerManager();
+module.exports = loggerManager;

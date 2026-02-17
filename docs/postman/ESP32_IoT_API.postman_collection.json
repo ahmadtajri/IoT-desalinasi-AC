@@ -1,17 +1,883 @@
 {
     "info": {
-        "_postman_id": "esp32-iot-data-logger-v20",
-        "name": "ESP32 IoT Desalinasi API v2.0",
-        "description": "API Collection untuk ESP32 IoT Data Logger - Monitoring dan logging data sensor desalinasi\n\nSensor Configuration:\n- Humidity: H1-H7 (7 sensors)\n- Temperature: T1-T15 (15 sensors)\n- Water Level: WL1 (1 sensor)\n- Total: 23 sensors",
+        "_postman_id": "esp32-iot-data-logger-v30",
+        "name": "ESP32 IoT Desalinasi API v3.0 - Complete",
+        "description": "Complete API Collection untuk ESP32 IoT Data Logger dengan Multi-User Authentication\n\n**Features:**\n- Authentication & Authorization (JWT)\n- User Management (Admin only)\n- Interval Management (Admin only)\n- Sensor Data CRUD\n- ESP32 Communication\n- Background Logger Control\n- Realtime Data\n\n**Sensor Configuration:**\n- Humidity: RH1-RH7 (7 sensors)\n- Air Temperature: T1-T7 (7 sensors)\n- Water Temperature: T8-T15 (8 sensors)\n- Water Level: WL1 (1 sensor - realtime only)\n- Water Weight: WW1 (1 sensor)\n- Total: 23 sensors + 1 valve\n\n**User Roles:**\n- ADMIN: Full access to all endpoints\n- USER: Limited access (no user/interval management)",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
     "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login Admin",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.success && jsonData.data) {",
+                                    "        pm.environment.set('access_token', jsonData.data.accessToken);",
+                                    "        pm.environment.set('refresh_token', jsonData.data.refreshToken);",
+                                    "        pm.environment.set('user_id', jsonData.data.user.id);",
+                                    "        pm.environment.set('user_role', jsonData.data.user.role);",
+                                    "        console.log('✅ Login successful as:', jsonData.data.user.username);",
+                                    "        console.log('Role:', jsonData.data.user.role);",
+                                    "    }",
+                                    "}",
+                                    "",
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has access token', function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/auth/login",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login sebagai Admin. Credentials default:\n- Username: admin\n- Password: admin123\n\nResponse akan menyimpan access_token dan refresh_token ke environment variables."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.success && jsonData.data) {",
+                                    "        pm.environment.set('access_token', jsonData.data.accessToken);",
+                                    "        pm.environment.set('refresh_token', jsonData.data.refreshToken);",
+                                    "        pm.environment.set('user_id', jsonData.data.user.id);",
+                                    "        pm.environment.set('user_role', jsonData.data.user.role);",
+                                    "        console.log('✅ Login successful as:', jsonData.data.user.username);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"user1\",\n    \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/auth/login",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login sebagai User biasa. Ganti username dan password sesuai user yang sudah dibuat."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Current User",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/auth/me",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "me"
+                            ]
+                        },
+                        "description": "Mendapatkan informasi user yang sedang login, termasuk active interval yang dipilih."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.success && jsonData.data) {",
+                                    "        pm.environment.set('access_token', jsonData.data.accessToken);",
+                                    "        pm.environment.set('refresh_token', jsonData.data.refreshToken);",
+                                    "        console.log('✅ Token refreshed successfully');",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/auth/refresh",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "refresh"
+                            ]
+                        },
+                        "description": "Refresh access token menggunakan refresh token yang tersimpan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Logout",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.environment.unset('access_token');",
+                                    "pm.environment.unset('refresh_token');",
+                                    "pm.environment.unset('user_id');",
+                                    "pm.environment.unset('user_role');",
+                                    "console.log('✅ Logged out successfully');"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/auth/logout",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        },
+                        "description": "Logout dan clear tokens dari environment."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Authentication endpoints - Login, Logout, Token Management"
+        },
+        {
+            "name": "User Management (Admin Only)",
+            "item": [
+                {
+                    "name": "Get All Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/users",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "users"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nMendapatkan daftar semua users dengan informasi:\n- User details\n- Active interval\n- Jumlah sensor data\n- Created by (admin yang membuat)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/users/{{user_id}}",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nMendapatkan detail user berdasarkan ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.success && jsonData.data) {",
+                                    "        pm.environment.set('new_user_id', jsonData.data.id);",
+                                    "        console.log('✅ User created:', jsonData.data.username);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"user_test\",\n    \"email\": \"user.test@example.com\",\n    \"password\": \"password123\",\n    \"role\": \"USER\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/users",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "users"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nMembuat user baru.\n\n**Fields:**\n- username: Required, unique\n- email: Required, unique\n- password: Required\n- role: Optional (USER/ADMIN), default: USER"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update User",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"user_updated\",\n    \"email\": \"user.updated@example.com\",\n    \"password\": \"newpassword123\",\n    \"role\": \"USER\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/users/{{new_user_id}}",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{new_user_id}}"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nUpdate user data. Semua field optional.\nJika password tidak diisi, password lama tetap digunakan."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Toggle User Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/users/{{new_user_id}}/status",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{new_user_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nActivate/Deactivate user account.\nUser yang di-deactivate tidak bisa login."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete User",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/users/{{new_user_id}}",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{new_user_id}}"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\n⚠️ Menghapus user secara permanen.\n- Tidak bisa menghapus diri sendiri\n- Sensor data user akan tetap ada (userId set to null)"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "User management endpoints - Admin only access"
+        },
+        {
+            "name": "Interval Management (Admin Only)",
+            "item": [
+                {
+                    "name": "Get All Intervals",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/intervals",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals"
+                            ]
+                        },
+                        "description": "Mendapatkan semua global intervals yang tersedia.\n\nJika authenticated, akan menandai interval mana yang aktif untuk user tersebut."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Active Interval",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/intervals/active",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals",
+                                "active"
+                            ]
+                        },
+                        "description": "Mendapatkan interval yang aktif untuk user yang sedang login.\n\nJika belum ada interval yang dipilih, akan return default interval pertama."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Interval (Hours/Minutes/Seconds)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Example: Create interval for 5 minutes",
+                                    "const hours = 0;",
+                                    "const minutes = 5;",
+                                    "const seconds = 0;",
+                                    "",
+                                    "const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;",
+                                    "pm.environment.set('interval_seconds', totalSeconds);",
+                                    "pm.environment.set('interval_name', `Setiap ${minutes} Menit`);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    if (jsonData.success && jsonData.data) {",
+                                    "        pm.environment.set('new_interval_id', jsonData.data.id);",
+                                    "        console.log('✅ Interval created:', jsonData.data.intervalName);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"intervalSeconds\": {{interval_seconds}},\n    \"intervalName\": \"{{interval_name}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/intervals",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nMembuat global interval baru.\n\n**Pre-request Script** akan menghitung total seconds dari jam/menit/detik.\n\nEdit di Pre-request Script:\n```javascript\nconst hours = 0;\nconst minutes = 5;\nconst seconds = 0;\n```"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Interval (Manual)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"intervalSeconds\": 300,\n    \"intervalName\": \"Setiap 5 Menit\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/intervals",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nMembuat interval secara manual dengan input seconds langsung.\n\n**Contoh:**\n- 30 detik = 30\n- 1 menit = 60\n- 5 menit = 300\n- 1 jam = 3600\n- 1 jam 30 menit = 5400"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Interval",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"intervalSeconds\": 600,\n    \"intervalName\": \"Setiap 10 Menit\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/intervals/{{new_interval_id}}",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals",
+                                "{{new_interval_id}}"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\nUpdate interval yang sudah ada."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Set Active Interval (User)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/intervals/{{new_interval_id}}/activate",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals",
+                                "{{new_interval_id}}",
+                                "activate"
+                            ]
+                        },
+                        "description": "**Authenticated User**\n\nSet interval sebagai active interval untuk user yang sedang login.\n\nSetiap user bisa memilih interval mereka sendiri."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Interval",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/intervals/{{new_interval_id}}",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "intervals",
+                                "{{new_interval_id}}"
+                            ]
+                        },
+                        "description": "**Admin Only**\n\n⚠️ Menghapus global interval.\nUser yang menggunakan interval ini akan kehilangan active interval mereka."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Interval management endpoints - Create, update, delete global intervals"
+        },
+        {
+            "name": "ESP32 Endpoints",
+            "item": [
+                {
+                    "name": "POST Temperature Data",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"T1\": 25.5,\n    \"T2\": 26.0,\n    \"T3\": 27.2,\n    \"T4\": 24.8,\n    \"T5\": 26.5,\n    \"T6\": 25.9,\n    \"T7\": 26.3,\n    \"T8\": 30.1,\n    \"T9\": 31.5,\n    \"T10\": 32.0,\n    \"T11\": 30.8,\n    \"T12\": 31.2,\n    \"T13\": 30.5,\n    \"T14\": 31.8,\n    \"T15\": 32.1\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/esp32/temperature",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "temperature"
+                            ]
+                        },
+                        "description": "ESP32 mengirim data temperature bulk (T1-T7 = suhu udara, T8-T15 = suhu air). Data akan disimpan di cache untuk realtime monitoring."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Humidity Data",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"RH1\": 65.5,\n    \"RH2\": 68.0,\n    \"RH3\": 70.2,\n    \"RH4\": 67.8,\n    \"RH5\": 69.5,\n    \"RH6\": 66.9,\n    \"RH7\": 68.3\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/esp32/humidity",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "humidity"
+                            ]
+                        },
+                        "description": "ESP32 mengirim data humidity bulk (RH1-RH7). Data akan disimpan di cache untuk realtime monitoring."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Water Level Data",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"WL1\": 75.5\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/esp32/waterlevel",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "waterlevel"
+                            ]
+                        },
+                        "description": "ESP32 mengirim data water level (WL1). Data realtime only, tidak disimpan ke database."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Water Weight Data",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"WW1\": 500.5\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/esp32/waterweight",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "waterweight"
+                            ]
+                        },
+                        "description": "ESP32 mengirim data water weight/hasil desalinasi (WW1) dalam gram."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Valve Status",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"open\",\n    \"level\": 75.5\n}"
+                        },
+                        "url": {
+                            "raw": "{{api_url}}/esp32/valve",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "valve"
+                            ]
+                        },
+                        "description": "ESP32 mengirim status valve/pompa (open/closed) dan level air."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET Realtime Cache",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/esp32/realtime",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "realtime"
+                            ]
+                        },
+                        "description": "Mendapatkan cached realtime data dari ESP32 (raw format)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET ESP32 Status",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/esp32/status",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "status"
+                            ]
+                        },
+                        "description": "Mengecek status koneksi ESP32 dan jumlah sensor yang aktif."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETE ESP32 Cache",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/esp32/cache",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "cache"
+                            ]
+                        },
+                        "description": "Menghapus cache realtime ESP32."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST Save Cache to Database",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/esp32/save",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "esp32",
+                                "save"
+                            ]
+                        },
+                        "description": "Menyimpan data dari cache ESP32 ke database (manual trigger)."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Endpoint untuk komunikasi dengan ESP32 hardware (No Auth required)"
+        },
+        {
+            "name": "Realtime Data",
+            "item": [
+                {
+                    "name": "GET Realtime Sensor Data",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{api_url}}/sensors/realtime",
+                            "host": [
+                                "{{api_url}}"
+                            ],
+                            "path": [
+                                "sensors",
+                                "realtime"
+                            ]
+                        },
+                        "description": "Mendapatkan data realtime semua sensor yang sudah diformat untuk frontend. Response includes:\n- realtimeData: { humidity, airTemperature, waterTemperature, waterLevel }\n- sensorStatus: status aktif/inaktif setiap sensor\n- pumpStatus: status pompa ON/OFF\n- waterWeight: berat air hasil desalinasi\n- valveStatus: status valve open/closed"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Endpoint untuk mendapatkan data realtime yang sudah diformat (No Auth required)"
+        },
         {
             "name": "Logger Control",
             "item": [
                 {
                     "name": "GET Logger Status",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -31,6 +897,9 @@
                 {
                     "name": "POST Start Logger",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -41,7 +910,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"humidity\": \"all\",\n    \"temperature\": \"all\",\n    \"waterLevel\": \"all\"\n}"
+                            "raw": "{\n    \"humidity\": \"all\",\n    \"temperature\": \"all\"\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/logger/start",
@@ -53,13 +922,16 @@
                                 "start"
                             ]
                         },
-                        "description": "Menyalakan logger background di server.\n\nParameter sensor dapat berupa:\n- \"all\" - rekam semua sensor dalam tipe tersebut\n- \"none\" - jangan rekam tipe sensor ini\n- \"H1\", \"T5\", \"WL1\" - rekam sensor spesifik saja"
+                        "description": "Menyalakan logger background di server.\n\nParameter sensor dapat berupa:\n- \"all\" - rekam semua sensor dalam tipe tersebut\n- \"none\" - jangan rekam tipe sensor ini\n- \"RH1\", \"T5\" - rekam sensor spesifik saja"
                     },
                     "response": []
                 },
                 {
                     "name": "POST Stop Logger",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "POST",
                         "header": [],
                         "url": {
@@ -79,6 +951,9 @@
                 {
                     "name": "POST Config Logger",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -89,7 +964,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"interval\": 5000,\n    \"humidity\": \"all\",\n    \"temperature\": \"all\",\n    \"waterLevel\": \"all\"\n}"
+                            "raw": "{\n    \"interval\": 5000,\n    \"humidity\": \"all\",\n    \"temperature\": \"all\"\n}"
                         },
                         "url": {
                             "raw": "{{api_url}}/logger/config",
@@ -101,12 +976,12 @@
                                 "config"
                             ]
                         },
-                        "description": "Mengubah konfigurasi logger:\n- interval: Dalam milidetik (5000, 30000, 60000)\n- humidity: \"all\" / \"none\" / \"H1\" s/d \"H7\"\n- temperature: \"all\" / \"none\" / \"T1\" s/d \"T15\"\n- waterLevel: \"all\" / \"none\" / \"WL1\""
+                        "description": "Mengubah konfigurasi logger:\n- interval: Dalam milidetik (5000, 30000, 60000)\n- humidity: \"all\" / \"none\" / \"RH1\" s/d \"RH7\"\n- temperature: \"all\" / \"none\" / \"T1\" s/d \"T15\""
                     },
                     "response": []
                 }
             ],
-            "description": "Kontrol background logger di server"
+            "description": "Kontrol background logger di server (No Auth required)"
         },
         {
             "name": "Sensor Data",
@@ -135,6 +1010,9 @@
                         }
                     ],
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -153,6 +1031,9 @@
                 {
                     "name": "GET Sensors with Limit",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -178,10 +1059,13 @@
                 {
                     "name": "GET Sensors by Sensor ID",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{api_url}}/sensors?sensorId=H1",
+                            "raw": "{{api_url}}/sensors?sensorId=RH1",
                             "host": [
                                 "{{api_url}}"
                             ],
@@ -191,18 +1075,21 @@
                             "query": [
                                 {
                                     "key": "sensorId",
-                                    "value": "H1",
-                                    "description": "Filter data berdasarkan sensor ID (H1-H7, T1-T15, WL1)"
+                                    "value": "RH1",
+                                    "description": "Filter data berdasarkan sensor ID (RH1-RH7, T1-T15, WL1)"
                                 }
                             ]
                         },
-                        "description": "Mendapatkan data dari sensor tertentu (H1-H7, T1-T15, WL1)"
+                        "description": "Mendapatkan data dari sensor tertentu (RH1-RH7, T1-T15, WL1)"
                     },
                     "response": []
                 },
                 {
                     "name": "GET Sensors by Type",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -217,21 +1104,24 @@
                                 {
                                     "key": "sensorType",
                                     "value": "humidity",
-                                    "description": "Filter data berdasarkan tipe sensor (humidity, temperature, waterLevel)"
+                                    "description": "Filter data berdasarkan tipe sensor (humidity, temperature)"
                                 }
                             ]
                         },
-                        "description": "Mendapatkan data sensor berdasarkan tipe (humidity, temperature, waterLevel)"
+                        "description": "Mendapatkan data sensor berdasarkan tipe (humidity, temperature)"
                     },
                     "response": []
                 },
                 {
                     "name": "GET Sensors by Date Range",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{api_url}}/sensors?startDate=2025-12-01T00:00:00Z&endDate=2025-12-31T23:59:59Z",
+                            "raw": "{{api_url}}/sensors?startDate=2026-01-01T00:00:00Z&endDate=2026-01-31T23:59:59Z",
                             "host": [
                                 "{{api_url}}"
                             ],
@@ -241,12 +1131,12 @@
                             "query": [
                                 {
                                     "key": "startDate",
-                                    "value": "2025-12-01T00:00:00Z",
+                                    "value": "2026-01-01T00:00:00Z",
                                     "description": "Tanggal mulai (ISO 8601 format)"
                                 },
                                 {
                                     "key": "endDate",
-                                    "value": "2025-12-31T23:59:59Z",
+                                    "value": "2026-01-31T23:59:59Z",
                                     "description": "Tanggal akhir (ISO 8601 format)"
                                 }
                             ]
@@ -275,22 +1165,18 @@
                             "listen": "prerequest",
                             "script": {
                                 "exec": [
-                                    "const sensorTypes = ['humidity', 'temperature', 'waterLevel'];",
-                                    "const type = sensorTypes[Math.floor(Math.random() * 3)];",
+                                    "const sensorTypes = ['humidity', 'temperature'];",
+                                    "const type = sensorTypes[Math.floor(Math.random() * 2)];",
                                     "let sensorId, unit, value;",
                                     "",
                                     "if (type === 'humidity') {",
-                                    "    sensorId = 'H' + (Math.floor(Math.random() * 7) + 1);",
+                                    "    sensorId = 'RH' + (Math.floor(Math.random() * 7) + 1);",
                                     "    value = (50 + Math.random() * 40).toFixed(1);",
                                     "    unit = '%';",
-                                    "} else if (type === 'temperature') {",
+                                    "} else {",
                                     "    sensorId = 'T' + (Math.floor(Math.random() * 15) + 1);",
                                     "    value = (20 + Math.random() * 50).toFixed(1);",
                                     "    unit = '°C';",
-                                    "} else {",
-                                    "    sensorId = 'WL1';",
-                                    "    value = (10 + Math.random() * 90).toFixed(1);",
-                                    "    unit = '%';",
                                     "}",
                                     "",
                                     "pm.environment.set('random_sensor_id', sensorId);",
@@ -303,6 +1189,9 @@
                         }
                     ],
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -331,6 +1220,9 @@
                 {
                     "name": "DELETE Single Record",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -350,26 +1242,32 @@
                 {
                     "name": "DELETE by Sensor ID",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
-                            "raw": "{{api_url}}/sensors/sensor/H1",
+                            "raw": "{{api_url}}/sensors/sensor/RH1",
                             "host": [
                                 "{{api_url}}"
                             ],
                             "path": [
                                 "sensors",
                                 "sensor",
-                                "H1"
+                                "RH1"
                             ]
                         },
-                        "description": "Menghapus semua data dari sensor tertentu (contoh: H1)."
+                        "description": "Menghapus semua data dari sensor tertentu (contoh: RH1)."
                     },
                     "response": []
                 },
                 {
                     "name": "DELETE by Sensor Type",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -383,13 +1281,16 @@
                                 "humidity"
                             ]
                         },
-                        "description": "Menghapus semua data berdasarkan tipe sensor (humidity, temperature, waterLevel)."
+                        "description": "Menghapus semua data berdasarkan tipe sensor (humidity, temperature)."
                     },
                     "response": []
                 },
                 {
                     "name": "DELETE by Interval",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -410,6 +1311,9 @@
                 {
                     "name": "DELETE All Sensors",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -426,7 +1330,7 @@
                     "response": []
                 }
             ],
-            "description": "Endpoint untuk operasi CRUD data sensor"
+            "description": "Endpoint untuk operasi CRUD data sensor (No Auth required for most)"
         },
         {
             "name": "Database Status",
@@ -434,6 +1338,9 @@
                 {
                     "name": "GET Database Status",
                     "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -452,79 +1359,6 @@
                 }
             ],
             "description": "Status dan monitoring database"
-        },
-        {
-            "name": "Error Handling Tests",
-            "item": [
-                {
-                    "name": "POST Missing Fields",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json",
-                                "type": "text"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"sensor_id\": \"H1\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{api_url}}/sensors",
-                            "host": [
-                                "{{api_url}}"
-                            ],
-                            "path": [
-                                "sensors"
-                            ]
-                        },
-                        "description": "Test error handling ketika field required tidak lengkap"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "DELETE Non-existent Data",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [],
-                        "url": {
-                            "raw": "{{api_url}}/sensors/99999",
-                            "host": [
-                                "{{api_url}}"
-                            ],
-                            "path": [
-                                "sensors",
-                                "99999"
-                            ]
-                        },
-                        "description": "Test error handling ketika menghapus data yang tidak ada"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "DELETE Invalid Sensor Type",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [],
-                        "url": {
-                            "raw": "{{api_url}}/sensors/type/invalid",
-                            "host": [
-                                "{{api_url}}"
-                            ],
-                            "path": [
-                                "sensors",
-                                "type",
-                                "invalid"
-                            ]
-                        },
-                        "description": "Test error handling ketika menghapus dengan tipe sensor tidak valid"
-                    },
-                    "response": []
-                }
-            ],
-            "description": "Test cases untuk error handling"
         }
     ],
     "variable": [
