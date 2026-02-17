@@ -62,7 +62,7 @@ export default function IntervalSettings() {
             console.error('❌ Error fetching intervals:', err);
             let errorMsg = 'Gagal memuat data interval';
             if (err.code === 'ERR_NETWORK') {
-                errorMsg = '🌐 Tidak dapat terhubung ke backend. Pastikan backend berjalan di port 3000';
+                errorMsg = '🌐 Tidak dapat terhubung ke backend. Pastikan backend sedang berjalan.';
             } else if (err.code === 'ECONNABORTED') {
                 errorMsg = '⏱️ Request timeout. Backend tidak merespons';
             } else if (err.response) {

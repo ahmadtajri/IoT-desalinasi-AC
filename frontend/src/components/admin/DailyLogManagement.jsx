@@ -51,7 +51,7 @@ const DailyLogManagement = () => {
             console.error('❌ Error fetching daily logs:', err);
             let errorMsg = 'Gagal mengambil data log harian';
             if (err.code === 'ERR_NETWORK') {
-                errorMsg = '🌐 Tidak dapat terhubung ke backend. Pastikan backend berjalan di port 3000';
+                errorMsg = '🌐 Tidak dapat terhubung ke backend. Pastikan backend sedang berjalan.';
             } else if (err.code === 'ECONNABORTED') {
                 errorMsg = '⏱️ Request timeout. Backend tidak merespons';
             } else if (err.response) {

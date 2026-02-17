@@ -52,7 +52,7 @@ api.interceptors.response.use(
             error.message = 'Request timeout - Backend mungkin tidak merespons';
         } else if (error.code === 'ERR_NETWORK') {
             console.error('🌐 Network Error:', error.config?.url);
-            error.message = 'Tidak dapat terhubung ke backend. Pastikan backend berjalan di port 3000';
+            error.message = 'Tidak dapat terhubung ke backend. Pastikan backend sedang berjalan.';
         } else if (error.response) {
             console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} - Status: ${error.response.status}`, error.response.data);
         } else {

@@ -1,17 +1,15 @@
 /**
  * Backend Connection Checker Utility
  * Checks if the backend is running and accessible
+ * Uses the same API base URL as the app (relative /api in production, :3000 in dev)
  */
 
-import axios from 'axios';
+import api from '../services/api';
 
 export const checkBackendConnection = async () => {
-    const hostname = window.location.hostname;
-    const backendUrl = `http://${hostname}:3000`;
-    
     try {
-        console.log('🔍 Checking backend connection at:', backendUrl);
-        const response = await axios.get(`${backendUrl}/api`, { timeout: 5000 });
+        console.log('🔍 Checking backend connection at:', api.defaults.baseURL);
+        const response = await api.get('/', { timeout: 5000 });
         
         if (response.data) {
             console.log('✅ Backend is running!', response.data);
@@ -27,7 +25,7 @@ export const checkBackendConnection = async () => {
         if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
             return {
                 status: 'offline',
-                message: `Backend tidak dapat dijangkau di ${backendUrl}:3000. Pastikan backend sedang berjalan.`,
+                message: 'Backend tidak dapat dijangkau. Pastikan backend sedang berjalan.',
                 error: error.message
             };
         } else if (error.code === 'ECONNABORTED') {

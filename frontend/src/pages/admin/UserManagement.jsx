@@ -149,7 +149,7 @@ export default function UserManagement() {
             console.error('❌ Error fetching users:', err);
             let errorMsg = 'Gagal memuat data pengguna';
             if (err.code === 'ERR_NETWORK') {
-                errorMsg = '🌐 Tidak dapat terhubung ke backend. Pastikan backend berjalan di port 3000';
+                errorMsg = '🌐 Tidak dapat terhubung ke backend. Pastikan backend sedang berjalan.';
             } else if (err.code === 'ECONNABORTED') {
                 errorMsg = '⏱️ Request timeout. Backend tidak merespons';
             } else if (err.response) {
