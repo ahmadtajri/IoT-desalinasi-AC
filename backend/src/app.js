@@ -72,6 +72,7 @@ const apiLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false },
 });
 
 // Strict rate limit for auth endpoints (login, register)
@@ -84,6 +85,7 @@ const authLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false },
 });
 
 // ESP32 endpoints need higher limits (frequent sensor data)
@@ -96,6 +98,7 @@ const esp32Limiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false },
 });
 
 // Apply general rate limit to all API routes
