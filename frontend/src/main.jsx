@@ -3,24 +3,21 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
-// Unregister ALL service workers to prevent caching/reload issues
-// This runs in all environments (dev + production) to clean up stale PWA workers
+// Service Worker cleanup: unregister OLD/stale service workers
+// but allow the new VitePWA service worker to register properly
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const registration of registrations) {
-            registration.unregister();
-            console.log('[SW] Unregistered service worker:', registration.scope);
+            // Only unregister old SW that don't match current scope
+            // VitePWA will register the proper new one automatically
+            const swUrl = registration.active?.scriptURL || '';
+            if (swUrl.includes('sw.js') && !swUrl.includes('workbox')) {
+                // Old custom sw.js — unregister it
+                registration.unregister();
+                console.log('[SW] Unregistered old service worker:', swUrl);
+            }
         }
     });
-    // Also clear all caches left by old service workers
-    if ('caches' in window) {
-        caches.keys().then((names) => {
-            for (const name of names) {
-                caches.delete(name);
-                console.log('[SW] Deleted cache:', name);
-            }
-        });
-    }
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
