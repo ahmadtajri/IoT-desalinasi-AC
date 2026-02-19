@@ -5,8 +5,18 @@ const LoggerController = require('../controllers/LoggerController');
 const ESP32Controller = require('../controllers/ESP32Controller');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
-// Welcome endpoint - API info
+// Welcome endpoint - API info (minimal in production)
 router.get('/', (req, res) => {
+    // Production: tampilkan info minimal saja (jangan expose endpoint list)
+    if (process.env.NODE_ENV === 'production') {
+        return res.json({
+            message: 'IoT Desalinasi API',
+            version: '2.2',
+            status: 'running'
+        });
+    }
+
+    // Development: tampilkan dokumentasi lengkap
     res.json({
         message: 'ESP32 IoT Desalinasi Data Logger API',
         version: '2.2',
