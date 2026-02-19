@@ -2,17 +2,23 @@ import axios from 'axios';
 
 // Detect API URL:
 // - Development (Vite dev server): http://localhost:3000/api (langsung ke backend)
-// - Production (Nginx): /api (relative path, Nginx reverse proxy ke backend)
+// - Production: gunakan VITE_API_URL dari .env (misal: https://api.desalinasiac.cloud)
 const getApiBaseUrl = () => {
-    const { hostname, port } = window.location;
+    const { port } = window.location;
 
     // Development: Vite dev server ports
     const devPorts = ['5173', '5174', '5175'];
     if (devPorts.includes(port)) {
-        return `http://${hostname}:3000/api`;
+        return `http://localhost:3000/api`;
     }
 
-    // Production: relative path → Nginx reverse proxy → localhost:3000
+    // Production: gunakan VITE_API_URL dari environment variable
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (apiUrl) {
+        return `${apiUrl}/api`;
+    }
+
+    // Fallback jika VITE_API_URL tidak di-set
     return '/api';
 };
 
