@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Droplets, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -47,10 +47,10 @@ export default function Login() {
                 <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
                     {/* Logo */}
                     <div className="flex flex-col items-center mb-8">
-                        <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
-                            <Droplets className="w-8 h-8 text-white" />
+                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
+                            <img src="/icons/icon-x192.png" alt="IoT Desalinasi AC" className="w-16 h-16 object-contain" />
                         </div>
-                        <h1 className="text-2xl font-bold text-white">IoT Desalinasi</h1>
+                        <h1 className="text-2xl font-bold text-white">IoT Desalinasi AC</h1>
                         <p className="text-blue-200/80 text-sm mt-1">Sistem Monitoring</p>
                     </div>
 

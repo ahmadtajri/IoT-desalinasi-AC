@@ -10,7 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="IoT Desalinasi" />
+  <meta name="apple-mobile-web-app-title" content="IoT Desalinasi AC" />
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-x96.png" />
@@ -26,70 +26,27 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="IoT Desalinasi Monitoring System - Real-time sensor monitoring for 6 compartments" />
-  <title>IoT Monitor - Desalinasi System</title>
+    content="IoT Desalinasi AC - Sistem monitoring real-time sensor desalinasi air berbasis IoT" />
+  <title>IoT Desalinasi AC</title>
 </head>
 
 <body>
   <div id="root"></div>
-  
-  <!-- PWA Service Worker Registration -->
+
+  <!-- PWA Install prompt handler (NO service worker registration here) -->
   <script>
-    // Register service worker for PWA offline support
-    // IMPORTANT: PWA requires HTTPS (except localhost) for install prompt & service worker
-    if ('serviceWorker' in navigator) {
-      const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      
-      if (!isSecure) {
-        console.warn('[PWA] ⚠️ Running on HTTP - PWA install prompt will NOT appear.');
-        console.warn('[PWA] Setup HTTPS with Let\'s Encrypt for full PWA support.');
-        console.warn('[PWA] Run on VPS: sudo certbot --nginx -d yourdomain.com');
-      }
-      
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('[PWA] Service Worker registered successfully:', registration);
-            
-            // Check for updates periodically
-            setInterval(() => {
-              registration.update();
-            }, 60000); // Check every minute
-          })
-          .catch(error => {
-            console.error('[PWA] Service Worker registration failed:', error);
-          });
-      });
-      
-      // Listen for controller change (new SW activated)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    }
-    
-    // Install prompt handling for PWA install button
-    let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
-      deferredPrompt = e;
-      console.log('[PWA] Install prompt deferred - ready to show install button');
-      // Store in window for app to use
-      window.deferredInstallPrompt = deferredPrompt;
+      window.deferredInstallPrompt = e;
+      console.log('[PWA] Install prompt ready');
     });
-    
-    // Track app installation
+
     window.addEventListener('appinstalled', () => {
-      console.log('[PWA] App was installed successfully');
-      deferredPrompt = null;
-      // Clear the deferred prompt
+      console.log('[PWA] App installed successfully');
       window.deferredInstallPrompt = null;
     });
   </script>
-  
+
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
