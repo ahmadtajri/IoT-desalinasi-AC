@@ -41,12 +41,12 @@ Aplikasi web ini memantau dan merekam data sensor dari proses desalinasi air sec
 │   │           Nginx (:80/443)            │          │
 │   │                                      │          │
 │   │   /         → frontend/dist/         │          │
-│   │   /api/*    → proxy localhost:3000   │          │
+│   │   /api/*    → proxy localhost:  │          │
 │   └──────────────────────────────────────┘          │
 │              │                                       │
 │              ▼                                       │
 │   ┌──────────────────────┐                          │
-│   │  Backend (PM2) :3000 │                          │
+│   │  Backend (PM2) :---- │                          │
 │   │  Node.js + Prisma    │                          │
 │   └──────────┬───────────┘                          │
 │              │                                       │
@@ -54,14 +54,12 @@ Aplikasi web ini memantau dan merekam data sensor dari proses desalinasi air sec
 │       ▼             ▼                               │
 │  ┌──────────┐  ┌──────────────┐                     │
 │  │  MySQL   │  │  Mosquitto   │                     │
-│  │  :3306   │  │  MQTT :1883  │                     │
 │  └──────────┘  └──────▲───────┘                     │
 │                       │                              │
 └───────────────────────┼──────────────────────────────┘
                         │
           ┌─────────────┴─────────────┐
-          │         ESP32 (x3)        │
-          │  DHT22 + DS18B20 + Relay  │
+          │         ESP32             │
           └───────────────────────────┘
 ```
 
@@ -182,22 +180,6 @@ IoT-desalinasi-AC/
 │   ├── package.json
 │   ├── vite.config.js
 │   └── tailwind.config.js
-│
-├── esp32/
-│   ├── ESP32_Generic_Sensors.ino             # Kode sensor generik
-│   ├── ESP32_Humidity_FIXED.ino              # Sensor kelembapan (fixed)
-│   ├── ESP32_Humidity_MQTT.ino               # Sensor kelembapan (MQTT)
-│   ├── ESP32_Temperature_FIXED.ino           # Sensor suhu (fixed)
-│   ├── ESP32_Temperature_MQTT.ino            # Sensor suhu (MQTT)
-│   ├── ESP32_Water_Control.ino               # Kontrol air
-│   └── ESP32_Water_Control_MQTT.ino          # Kontrol air (MQTT)
-│
-├── docs/                         # Dokumentasi
-│   ├── DOKUMENTASI_PROYEK.md     # ← FILE INI
-│   ├── SETUP_VPS.md              # Panduan deploy ke VPS
-│   ├── PANDUAN_PENGGUNA.md       # Guide book penggunaan website
-│   ├── deploy-backend-vps.md     # Deploy reference
-│   └── setup-subdomain-hostinger.md
 │
 └── README.md
 ```
@@ -339,10 +321,10 @@ User ──┬──→ SensorData (userId)         # Data milik user
 
 ```env
 # Database
-DATABASE_URL="mysql://user:password@localhost:3306/iot_desalinasi"
+DATABASE_URL="mysql://user:password@localhost:----/iot_desalinasi"
 
 # Server
-PORT=3000
+PORT=----
 NODE_ENV=production
 
 # JWT
@@ -352,14 +334,14 @@ JWT_REFRESH_SECRET=<random-64-byte-hex-different>
 JWT_REFRESH_EXPIRES_IN=7d
 
 # Default Admin
-DEFAULT_ADMIN_USERNAME=Superadmin
-DEFAULT_ADMIN_EMAIL=superadmin@iot-desalinasi.com
-DEFAULT_ADMIN_PASSWORD=<password-aman>
+DEFAULT_ADMIN_USERNAME=----
+DEFAULT_ADMIN_EMAIL=----
+DEFAULT_ADMIN_PASSWORD=----
 
 # MQTT
-MQTT_BROKER=mqtt://localhost:1883
-MQTT_USERNAME=desalinasi
-MQTT_PASSWORD=<mqtt-password>
+MQTT_BROKER=mqtt://localhost:----
+MQTT_USERNAME=----
+MQTT_PASSWORD=----
 ```
 
 ---
