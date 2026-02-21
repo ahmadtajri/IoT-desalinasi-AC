@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, ChevronLeft, ChevronRight, Activity, X, FileImage, Cog, Shield } from 'lucide-react';
 import logoIcon from '../../assets/icons/icon-x192.png';
@@ -12,7 +12,25 @@ import PropTypes from 'prop-types';
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [showSchemaModal, setShowSchemaModal] = useState(false);
+    const [schemaAnimated, setSchemaAnimated] = useState(false);
     const [isManageMode, setIsManageMode] = useState(false);
+
+    // Animate in/out for bottom sheet
+    useEffect(() => {
+        if (showSchemaModal) {
+            requestAnimationFrame(() => setSchemaAnimated(true));
+        } else {
+            setSchemaAnimated(false);
+        }
+    }, [showSchemaModal]);
+
+    const closeSchemaModal = () => {
+        setSchemaAnimated(false);
+        setTimeout(() => {
+            setShowSchemaModal(false);
+            setIsManageMode(false);
+        }, 350);
+    };
     const location = useLocation();
     const { isOnline, isChecking } = useBackendStatus(5000);
     const { isAdmin } = useAuth();
@@ -234,40 +252,52 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                 </div>
             </div>
 
-            {/* Schema Modal */}
+            {/* Schema Modal - Bottom Sheet on Mobile, Center Modal on Desktop */}
             {showSchemaModal && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50 backdrop-blur-sm"
-                    onClick={() => setShowSchemaModal(false)}
-                >
+                <>
+                    {/* Backdrop */}
                     <div
-                        className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden"
+                        className={`fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm transition-opacity duration-350 ${schemaAnimated ? 'opacity-100' : 'opacity-0'}`}
+                        onClick={closeSchemaModal}
+                    />
+
+                    {/* Mobile: Bottom Sheet */}
+                    <div
+                        className={`
+                            fixed bottom-0 left-0 right-0 z-[101]
+                            md:hidden
+                            bg-white rounded-t-3xl shadow-2xl
+                            flex flex-col
+                            h-[92vh]
+                            transition-transform duration-350 ease-out
+                            ${schemaAnimated ? 'translate-y-0' : 'translate-y-full'}
+                        `}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Modal Header */}
-                        <div className="bg-blue-500 p-4 sm:p-6 flex items-center justify-between">
-                            <div className="flex items-center gap-2 sm:gap-3 text-white flex-1 min-w-0">
-                                <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg flex-shrink-0">
-                                    <FileImage size={20} className="sm:w-7 sm:h-7" />
+                        {/* Header */}
+                        <div className="bg-blue-500 flex items-center justify-between px-4 py-3 flex-shrink-0">
+                            <div className="flex items-center gap-2 text-white flex-1 min-w-0">
+                                <div className="p-1.5 bg-white/20 rounded-lg flex-shrink-0">
+                                    <FileImage size={18} />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="text-lg sm:text-2xl font-bold truncate">Skema Sistem Desalinasi</h2>
-                                    <p className="text-blue-100 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">Diagram alur proses desalinasi air laut</p>
+                                    <h2 className="text-base font-bold truncate">Skema Sistem Desalinasi</h2>
+                                    <p className="text-blue-100 text-xs truncate">Diagram alur proses desalinasi air laut</p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => setShowSchemaModal(false)}
-                                className="p-1.5 sm:p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors flex-shrink-0 ml-2"
+                                onClick={closeSchemaModal}
+                                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0 ml-2"
                             >
-                                <X className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                <X className="w-5 h-5 text-white" />
                             </button>
                         </div>
 
-                        {/* Modal Content */}
-                        <div className="flex-1 overflow-hidden bg-gray-50 flex flex-col">
+                        {/* Content */}
+                        <div className="flex-1 overflow-hidden bg-gray-50 flex flex-col min-h-0">
                             <div className="w-full h-full overflow-hidden">
                                 {isManageMode && isAdmin() ? (
-                                    <div className="h-full overflow-auto p-3 sm:p-6">
+                                    <div className="h-full overflow-auto p-3">
                                         <SchemaManagement />
                                     </div>
                                 ) : (
@@ -276,49 +306,108 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex justify-between items-center gap-2 sm:gap-3">
-                            {/* Manage Schema Button - Only visible for admin */}
+                        {/* Footer */}
+                        <div className="bg-gray-50 px-3 py-3 border-t border-gray-200 flex justify-between items-center gap-2 flex-shrink-0 pb-safe">
                             {isAdmin() && (
                                 <button
                                     onClick={() => setIsManageMode(!isManageMode)}
-                                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm flex-1 sm:flex-initial justify-center ${isManageMode
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 shadow-sm flex-1 justify-center ${isManageMode
                                         ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                         : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                                         }`}
                                 >
                                     {isManageMode ? (
-                                        <>
-                                            <FileImage size={14} className="sm:w-4 sm:h-4" />
-                                            <span className="hidden xs:inline">View Schema</span>
-                                            <span className="xs:hidden">View</span>
-                                        </>
+                                        <><FileImage size={13} /><span>View Schema</span></>
                                     ) : (
-                                        <>
-                                            <Cog size={14} className="sm:w-4 sm:h-4" />
-                                            <span className="hidden xs:inline">Manage Schema</span>
-                                            <span className="xs:hidden">Manage</span>
-                                        </>
+                                        <><Cog size={13} /><span>Manage</span></>
                                     )}
                                 </button>
                             )}
-
-                            {/* Spacer for non-admin users */}
-                            {!isAdmin() && <div></div>}
-
-                            {/* Close Button */}
+                            {!isAdmin() && <div />}
                             <button
-                                onClick={() => {
-                                    setShowSchemaModal(false);
-                                    setIsManageMode(false);
-                                }}
-                                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base flex-1 sm:flex-initial"
+                                onClick={closeSchemaModal}
+                                className="px-4 py-2 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-all duration-200 text-sm flex-1"
                             >
                                 Tutup
                             </button>
                         </div>
                     </div>
-                </div>
+
+                    {/* Desktop: Center Modal */}
+                    <div
+                        className={`
+                            fixed inset-0 z-[101]
+                            hidden md:flex
+                            items-center justify-center p-4
+                            transition-opacity duration-350
+                            ${schemaAnimated ? 'opacity-100' : 'opacity-0'}
+                        `}
+                        onClick={closeSchemaModal}
+                    >
+                        <div
+                            className={`bg-white rounded-2xl shadow-2xl max-w-6xl w-full h-[90vh] flex flex-col overflow-hidden transition-transform duration-350 ${schemaAnimated ? 'scale-100' : 'scale-95'}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Modal Header */}
+                            <div className="bg-blue-500 p-6 flex items-center justify-between flex-shrink-0">
+                                <div className="flex items-center gap-3 text-white flex-1 min-w-0">
+                                    <div className="p-2 bg-white/20 rounded-lg flex-shrink-0">
+                                        <FileImage size={24} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h2 className="text-2xl font-bold truncate">Skema Sistem Desalinasi</h2>
+                                        <p className="text-blue-100 text-sm mt-1 truncate">Diagram alur proses desalinasi air laut</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={closeSchemaModal}
+                                    className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0 ml-2"
+                                >
+                                    <X className="w-6 h-6 text-white" />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="flex-1 overflow-hidden bg-gray-50 flex flex-col min-h-0">
+                                <div className="w-full h-full overflow-hidden">
+                                    {isManageMode && isAdmin() ? (
+                                        <div className="h-full overflow-auto p-6">
+                                            <SchemaManagement />
+                                        </div>
+                                    ) : (
+                                        <SchemaViewer />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center gap-3 flex-shrink-0">
+                                {isAdmin() && (
+                                    <button
+                                        onClick={() => setIsManageMode(!isManageMode)}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-sm ${isManageMode
+                                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                            : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {isManageMode ? (
+                                            <><FileImage size={16} /><span>View Schema</span></>
+                                        ) : (
+                                            <><Cog size={16} /><span>Manage Schema</span></>
+                                        )}
+                                    </button>
+                                )}
+                                {!isAdmin() && <div />}
+                                <button
+                                    onClick={closeSchemaModal}
+                                    className="px-6 py-2.5 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow-md text-base"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
         </>
     );

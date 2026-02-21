@@ -1,6 +1,6 @@
 {
   "name": "IoT Desalinasi AC",
-  "short_name": "IoT Des. AC",
+  "short_name": "IoT Desalinasi AC",
   "description": "Sistem monitoring real-time untuk sistem desalinasi air berbasis IoT",
   "start_url": "/",
   "scope": "/",

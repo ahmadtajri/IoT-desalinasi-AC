@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import userService from '../../services/userService';
+import BottomSheetModal from '../../components/shared/BottomSheetModal';
 import {
     Users, Plus, Trash2, Edit2, Power, AlertCircle,
-    ChevronDown, ChevronUp, X, Loader2
+    ChevronDown, ChevronUp, Loader2
 } from 'lucide-react';
 import CustomAlert from '../../components/shared/CustomAlert';
 import PropTypes from 'prop-types';
@@ -87,33 +88,6 @@ UserCard.propTypes = {
     onToggleStatus: PropTypes.func.isRequired
 };
 
-// Komponen Modal
-function Modal({ isOpen, onClose, title, children, headerColor = 'bg-blue-500' }) {
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="absolute inset-0" onClick={onClose}></div>
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
-                <div className={`flex items-center justify-between p-5 ${headerColor}`}>
-                    <h2 className="text-lg font-bold text-white">{title}</h2>
-                    <button onClick={onClose} className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 overflow-y-auto flex-1">{children}</div>
-            </div>
-        </div>
-    );
-}
-
-Modal.propTypes = {
-    isOpen: PropTypes.bool.isRequired,
-    onClose: PropTypes.func.isRequired,
-    title: PropTypes.string.isRequired,
-    children: PropTypes.node.isRequired,
-    headerColor: PropTypes.string
-};
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
@@ -303,7 +277,7 @@ export default function UserManagement() {
             </div>
 
             {/* Modal Buat Pengguna */}
-            <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Buat Pengguna Baru" headerColor="bg-purple-500">
+            <BottomSheetModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Buat Pengguna Baru" headerColor="bg-purple-500">
                 <form onSubmit={handleCreateUser} className="space-y-4">
                     {formError && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{formError}</div>}
                     <div>
@@ -333,10 +307,10 @@ export default function UserManagement() {
                         </button>
                     </div>
                 </form>
-            </Modal>
+            </BottomSheetModal>
 
             {/* Modal Edit Pengguna */}
-            <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Ubah Pengguna" headerColor="bg-blue-500">
+            <BottomSheetModal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Ubah Pengguna" headerColor="bg-blue-500">
                 <form onSubmit={handleEditUser} className="space-y-4">
                     {formError && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{formError}</div>}
                     <div>
@@ -366,10 +340,10 @@ export default function UserManagement() {
                         </button>
                     </div>
                 </form>
-            </Modal>
+            </BottomSheetModal>
 
             {/* Modal Konfirmasi Hapus */}
-            <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus" headerColor="bg-red-500">
+            <BottomSheetModal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus" headerColor="bg-red-500">
                 <div className="space-y-4">
                     <p className="text-gray-700">
                         Apakah Anda yakin ingin menghapus pengguna <strong>{selectedUser?.username}</strong>?
@@ -386,7 +360,7 @@ export default function UserManagement() {
                         </button>
                     </div>
                 </div>
-            </Modal>
+            </BottomSheetModal>
 
             <CustomAlert
                 isOpen={confirmConfig.isOpen}

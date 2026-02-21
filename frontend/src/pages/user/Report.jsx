@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Download, Trash2, ChevronDown, CheckCircle, X, Droplets, Thermometer } from 'lucide-react';
+import { Download, Trash2, ChevronDown, CheckCircle, X, Droplets, Thermometer, User } from 'lucide-react';
 import sensorService from '../../services/sensorService';
 import sensorConfigService from '../../services/sensorConfigService';
 import DataLogger from '../../components/user/DataLogger';
 import { useLogger } from '../../context/LoggerContext';
+import { useAuth } from '../../context/AuthContext';
 import CustomAlert from '../../components/shared/CustomAlert';
 
 const Report = () => {
@@ -27,6 +28,9 @@ const Report = () => {
 
     // Use Global Logger Context
     const { isLogging, toggleLogging, changeInterval, logCount, logInterval, realtimeData, sensorStatus } = useLogger();
+    const { user, isAdmin } = useAuth();
+    const currentUserIsAdmin = isAdmin();
+
 
     // Sensor configuration from database
     const [sensorConfigMap, setSensorConfigMap] = useState({});
@@ -298,7 +302,9 @@ const Report = () => {
         }
 
         // Custom CSV export grouped by category
-        const headers = ['ID', 'Sensor ID', 'Type', 'Value', 'Unit', 'Status', 'Interval (s)', 'Timestamp'];
+        const headers = currentUserIsAdmin
+            ? ['ID', 'Direkam Oleh', 'Sensor ID', 'Type', 'Value', 'Unit', 'Status', 'Interval (s)', 'Timestamp']
+            : ['ID', 'Sensor ID', 'Type', 'Value', 'Unit', 'Status', 'Interval (s)', 'Timestamp'];
 
         const groups = {
             humidity: [],
@@ -320,16 +326,29 @@ const Report = () => {
             return [
                 `${title}`,
                 headers.join(','),
-                ...rows.map(row => [
-                    row.id,
-                    row.sensor_id,
-                    getTypeLabel(row),
-                    row.value,
-                    row.unit,
-                    row.status,
-                    row.interval || 'N/A',
-                    `"${new Date(row.timestamp).toLocaleString()}"`
-                ].join(',')),
+                ...rows.map(row => currentUserIsAdmin
+                    ? [
+                        row.id,
+                        row.userName || 'N/A',
+                        row.sensor_id,
+                        getTypeLabel(row),
+                        row.value,
+                        row.unit,
+                        row.status,
+                        row.interval || 'N/A',
+                        `"${new Date(row.timestamp).toLocaleString()}"`
+                    ].join(',')
+                    : [
+                        row.id,
+                        row.sensor_id,
+                        getTypeLabel(row),
+                        row.value,
+                        row.unit,
+                        row.status,
+                        row.interval || 'N/A',
+                        `"${new Date(row.timestamp).toLocaleString()}"`
+                    ].join(',')
+                ),
                 ''
             ];
         };
@@ -347,7 +366,10 @@ const Report = () => {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `sensor_report_${new Date().toISOString().slice(0, 10)}.csv`);
+        // Filename includes username and date for individual identification
+        const username = user?.username || 'user';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        link.setAttribute('download', `sensor_report_${username}_${dateStr}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -393,10 +415,10 @@ const Report = () => {
                     if (hasWaterTemp) filterParams.sensorTypes.push('water_temperature');
 
                     await sensorService.deleteByFilter(filterParams);
-                    
+
                     // Refresh data after deletion
                     await fetchData();
-                    
+
                     showAlert('Sukses', `${dataCount} data berhasil dihapus sesuai filter yang dipilih`, 'success');
                 } catch (error) {
                     console.error('Error deleting data by filter:', error);
@@ -446,11 +468,10 @@ const Report = () => {
                                     handleDeleteByFilter();
                                 }
                             }}
-                            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-colors text-sm font-medium w-full sm:w-auto ${
-                                selectedHumiditySensor === 'none' && selectedAirTempSensor === 'none' && selectedWaterTempSensor === 'none'
-                                    ? 'bg-gray-400 text-white cursor-not-allowed opacity-60'
-                                    : 'bg-red-600 text-white hover:bg-red-700'
-                            }`}
+                            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-colors text-sm font-medium w-full sm:w-auto ${selectedHumiditySensor === 'none' && selectedAirTempSensor === 'none' && selectedWaterTempSensor === 'none'
+                                ? 'bg-gray-400 text-white cursor-not-allowed opacity-60'
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                                }`}
                             disabled={selectedHumiditySensor === 'none' && selectedAirTempSensor === 'none' && selectedWaterTempSensor === 'none'}
                             title={
                                 selectedHumiditySensor === 'none' && selectedAirTempSensor === 'none' && selectedWaterTempSensor === 'none'
@@ -644,17 +665,8 @@ const Report = () => {
                     onIntervalChange={handleIntervalChange}
                     isLogging={isLogging}
                     onToggleLogging={handleToggleLogging}
+                    logCount={logCount}
                 />
-                {isLogging && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100 flex justify-between items-center">
-                        <p className="text-sm text-blue-700">
-                            📊 Sedang merekam data... Total siklus: <span className="font-bold">{logCount}</span>
-                        </p>
-                        <p className="text-xs text-blue-600">
-                            Data otomatis muncul di tabel di bawah
-                        </p>
-                    </div>
-                )}
             </div>
 
             {/* Filters */}
@@ -743,13 +755,18 @@ const Report = () => {
                                 <th className="px-6 py-4 font-semibold text-gray-600 bg-gray-50">Nilai</th>
                                 <th className="px-6 py-4 font-semibold text-gray-600 bg-gray-50 text-center">Status</th>
                                 <th className="px-6 py-4 font-semibold text-gray-600 bg-gray-50">Interval</th>
+                                {currentUserIsAdmin && (
+                                    <th className="px-6 py-4 font-semibold text-gray-600 bg-gray-50 text-center">Direkam Oleh</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredData.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                                        Tidak ada data untuk filter yang dipilih.
+                                    <td colSpan={currentUserIsAdmin ? 7 : 6} className="px-6 py-12 text-center text-gray-500">
+                                        {isLogging
+                                            ? 'Data logger aktif. Menunggu data masuk...'
+                                            : 'Belum ada data. Aktifkan Data Logger untuk mulai merekam.'}
                                     </td>
                                 </tr>
                             ) : (
@@ -793,6 +810,15 @@ const Report = () => {
                                                 {row.interval ? `${row.interval}s` : 'N/A'}
                                             </span>
                                         </td>
+                                        {/* Admin-only: show who recorded this data */}
+                                        {currentUserIsAdmin && (
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                                                    <User size={11} />
+                                                    {row.userName || 'N/A'}
+                                                </span>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))
                             )}

@@ -7,6 +7,7 @@ import {
 import sensorConfigService from '../../services/sensorConfigService';
 import Alert from '../shared/Alert';
 import CustomAlert from '../shared/CustomAlert';
+import BottomSheetModal from '../shared/BottomSheetModal';
 import PropTypes from 'prop-types';
 
 const SENSOR_TYPE_INFO = {
@@ -427,162 +428,122 @@ const SensorConfigPanel = ({ onConfigChange }) => {
                 </div>
             )}
 
-            {/* Modal untuk Konfigurasi Sensor */}
-            {showAddForm && (
-                <>
-                    {/* Backdrop Overlay */}
-                    <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-                        {/* Modal Content */}
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <div className="modal-title-section">
-                                    <Settings size={24} className="modal-icon" />
-                                    <div>
-                                        <h3>Konfigurasi Sensor Baru</h3>
-                                        <p className="modal-subtitle">Atur kategori dan parameter untuk sensor yang terdeteksi</p>
-                                    </div>
+            {/* Modal Konfigurasi Sensor Baru */}
+            <BottomSheetModal
+                isOpen={showAddForm}
+                onClose={() => setShowAddForm(false)}
+                title="Konfigurasi Sensor Baru"
+                headerColor="bg-blue-600"
+            >
+                <div className="space-y-4">
+                    {/* Sensor ID */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-semibold text-gray-700">
+                            Sensor ID <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            value={newSensor.sensorId}
+                            onChange={(e) => setNewSensor({ ...newSensor, sensorId: e.target.value.toUpperCase() })}
+                            placeholder="Contoh: T7, RH8, WL2"
+                            disabled={newSensor.sensorId && discoveredSensors.find(s => s.sensorId === newSensor.sensorId)}
+                        />
+                        <span className="text-xs text-gray-500">ID unik untuk mengidentifikasi sensor</span>
+                    </div>
+
+                    {/* Nama Display */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-semibold text-gray-700">
+                            Nama Display <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                            value={newSensor.displayName}
+                            onChange={(e) => setNewSensor({ ...newSensor, displayName: e.target.value })}
+                            placeholder="Contoh: Suhu Kolam Utama"
+                        />
+                        <span className="text-xs text-gray-500">Nama yang akan ditampilkan pada dashboard</span>
+                    </div>
+
+                    {/* Kategori Sensor */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-semibold text-gray-700">
+                            Kategori Sensor <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
+                            value={newSensor.sensorType}
+                            onChange={(e) => {
+                                const type = e.target.value;
+                                const typeInfo = SENSOR_TYPE_INFO[type];
+                                setNewSensor({ ...newSensor, sensorType: type, unit: typeInfo?.unit || '°C' });
+                            }}
+                        >
+                            <option value="air_temperature">🌡️ Suhu Udara</option>
+                            <option value="water_temperature">💧 Suhu Air</option>
+                            <option value="humidity">💦 Kelembapan</option>
+                            <option value="water_level">🌊 Level Air</option>
+                            <option value="water_weight">⚖️ Berat Air</option>
+                            <option value="uncategorized">❓ Belum Dikategorikan</option>
+                        </select>
+                        <span className="text-xs text-gray-500">Tentukan jenis pengukuran sensor</span>
+                    </div>
+
+                    {/* Unit Pengukuran */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-semibold text-gray-700">Unit Pengukuran</label>
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                            value={newSensor.unit}
+                            onChange={(e) => setNewSensor({ ...newSensor, unit: e.target.value })}
+                            placeholder="Contoh: °C, %, kg"
+                        />
+                        <span className="text-xs text-gray-500">Satuan yang digunakan untuk nilai sensor</span>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="mt-2 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                        <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm mb-3">
+                            <AlertCircle size={16} />
+                            <span>Preview Konfigurasi</span>
+                        </div>
+                        <div className="space-y-2">
+                            {[{ label: 'ID', value: newSensor.sensorId }, { label: 'Nama', value: newSensor.displayName }, { label: 'Kategori', value: SENSOR_TYPE_INFO[newSensor.sensorType]?.label }, { label: 'Unit', value: newSensor.unit }].map(({ label, value }) => (
+                                <div key={label} className="flex justify-between items-center px-3 py-2 bg-white rounded-lg">
+                                    <span className="text-xs text-gray-500 font-medium">{label}:</span>
+                                    <span className="text-sm font-semibold font-mono text-gray-800">{value || '-'}</span>
                                 </div>
-                                <button className="modal-close-btn" onClick={() => setShowAddForm(false)}>
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="modal-body">
-                                <div className="form-grid-modal">
-                                    {/* Sensor ID */}
-                                    <div className="form-group-modal">
-                                        <label className="form-label">
-                                            <span className="label-text">Sensor ID</span>
-                                            <span className="label-required">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="form-input-modal"
-                                            value={newSensor.sensorId}
-                                            onChange={(e) => setNewSensor({ ...newSensor, sensorId: e.target.value.toUpperCase() })}
-                                            placeholder="Contoh: T7, RH8, WL2"
-                                            disabled={newSensor.sensorId && discoveredSensors.find(s => s.sensorId === newSensor.sensorId)}
-                                        />
-                                        <span className="form-hint">ID unik untuk mengidentifikasi sensor</span>
-                                    </div>
-
-                                    {/* Nama Display */}
-                                    <div className="form-group-modal">
-                                        <label className="form-label">
-                                            <span className="label-text">Nama Display</span>
-                                            <span className="label-required">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="form-input-modal"
-                                            value={newSensor.displayName}
-                                            onChange={(e) => setNewSensor({ ...newSensor, displayName: e.target.value })}
-                                            placeholder="Contoh: Suhu Kolam Utama, kelembapan Ruangan"
-                                        />
-                                        <span className="form-hint">Nama yang akan ditampilkan pada dashboard</span>
-                                    </div>
-
-                                    {/* Kategori/Tipe Sensor */}
-                                    <div className="form-group-modal">
-                                        <label className="form-label">
-                                            <span className="label-text">Kategori Sensor</span>
-                                            <span className="label-required">*</span>
-                                        </label>
-                                        <select
-                                            className="form-select-modal"
-                                            value={newSensor.sensorType}
-                                            onChange={(e) => {
-                                                const type = e.target.value;
-                                                const typeInfo = SENSOR_TYPE_INFO[type];
-                                                setNewSensor({ ...newSensor, sensorType: type, unit: typeInfo?.unit || '°C' });
-                                            }}
-                                        >
-                                            <option value="air_temperature">🌡️ Suhu Udara</option>
-                                            <option value="water_temperature">💧 Suhu Air</option>
-                                            <option value="humidity">💦 kelembapan</option>
-                                            <option value="water_level">🌊 Level Air</option>
-                                            <option value="water_weight">⚖️ Berat Air</option>
-                                            <option value="uncategorized">❓ Belum Dikategorikan</option>
-                                        </select>
-                                        <span className="form-hint">Tentukan jenis pengukuran sensor</span>
-                                    </div>
-
-                                    {/* Unit Pengukuran */}
-                                    <div className="form-group-modal">
-                                        <label className="form-label">
-                                            <span className="label-text">Unit Pengukuran</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="form-input-modal"
-                                            value={newSensor.unit}
-                                            onChange={(e) => setNewSensor({ ...newSensor, unit: e.target.value })}
-                                            placeholder="Contoh: °C, %, kg"
-                                        />
-                                        <span className="form-hint">Satuan yang digunakan untuk nilai sensor</span>
-                                    </div>
-                                </div>
-
-                                {/* Preview Card */}
-                                <div className="preview-card">
-                                    <div className="preview-header">
-                                        <AlertCircle size={16} />
-                                        <span>Preview Konfigurasi</span>
-                                    </div>
-                                    <div className="preview-content">
-                                        <div className="preview-item">
-                                            <span className="preview-label">ID:</span>
-                                            <span className="preview-value">{newSensor.sensorId || '-'}</span>
-                                        </div>
-                                        <div className="preview-item">
-                                            <span className="preview-label">Nama:</span>
-                                            <span className="preview-value">{newSensor.displayName || '-'}</span>
-                                        </div>
-                                        <div className="preview-item">
-                                            <span className="preview-label">Kategori:</span>
-                                            <span className="preview-value">
-                                                {SENSOR_TYPE_INFO[newSensor.sensorType]?.label || '-'}
-                                            </span>
-                                        </div>
-                                        <div className="preview-item">
-                                            <span className="preview-label">Unit:</span>
-                                            <span className="preview-value">{newSensor.unit || '-'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="modal-footer">
-                                <button
-                                    className="btn-modal btn-cancel"
-                                    onClick={() => setShowAddForm(false)}
-                                    disabled={saving}
-                                >
-                                    <X size={16} />
-                                    Batal
-                                </button>
-                                <button
-                                    className="btn-modal btn-save"
-                                    onClick={handleAddSensor}
-                                    disabled={saving || !newSensor.sensorId || !newSensor.displayName}
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 size={16} className="spin" />
-                                            Menyimpan...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save size={16} />
-                                            Simpan Konfigurasi
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                            ))}
                         </div>
                     </div>
-                </>
-            )}
+
+                    {/* Tombol Aksi */}
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-600 font-semibold rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all"
+                            onClick={() => setShowAddForm(false)}
+                            disabled={saving}
+                        >
+                            <X size={16} />
+                            Batal
+                        </button>
+                        <button
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={handleAddSensor}
+                            disabled={saving || !newSensor.sensorId || !newSensor.displayName}
+                        >
+                            {saving ? (
+                                <><Loader2 size={16} className="animate-spin" />Menyimpan...</>
+                            ) : (
+                                <><Save size={16} />Simpan Konfigurasi</>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </BottomSheetModal>
 
             {/* Loading */}
             {loading && (
@@ -1086,333 +1047,6 @@ const SensorConfigPanel = ({ onConfigChange }) => {
                     }
                 }
 
-                /* ===== MODAL STYLES ===== */
-                .modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(4px);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 1000;
-                    padding: 20px;
-                    animation: fadeIn 0.2s ease-out;
-                }
-
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                    }
-                    to {
-                        opacity: 1;
-                    }
-                }
-
-                @keyframes slideUp {
-                    from {
-                        transform: translateY(20px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                }
-
-                .modal-content {
-                    background: white;
-                    border-radius: 16px;
-                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                    max-width: 600px;
-                    width: 100%;
-                    max-height: 90vh;
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                    animation: slideUp 0.3s ease-out;
-                }
-
-                .modal-header {
-                    display: flex;
-                    align-items: flex-start;
-                    justify-content: space-between;
-                    padding: 24px;
-                    border-bottom: 1px solid #e5e7eb;
-                    background: var(--primary-color);
-                    color: white;
-                }
-
-                .modal-title-section {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 12px;
-                }
-
-                .modal-icon {
-                    color: white;
-                    flex-shrink: 0;
-                }
-
-                .modal-header h3 {
-                    margin: 0;
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    color: white;
-                }
-
-                .modal-subtitle {
-                    margin: 4px 0 0 0;
-                    font-size: 0.875rem;
-                    color: rgba(255, 255, 255, 0.9);
-                    font-weight: 400;
-                }
-
-                .modal-close-btn {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: none;
-                    color: white;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    flex-shrink: 0;
-                }
-
-                .modal-close-btn:hover {
-                    background: rgba(255, 255, 255, 0.3);
-                }
-
-                .modal-body {
-                    padding: 24px;
-                    overflow-y: auto;
-                    flex: 1;
-                }
-
-                .form-grid-modal {
-                    display: grid;
-                    gap: 20px;
-                }
-
-                .form-group-modal {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .form-label {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                }
-
-                .label-text {
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    color: #374151;
-                }
-
-                .label-required {
-                    color: #ef4444;
-                    font-weight: bold;
-                }
-
-                .form-input-modal {
-                    padding: 12px 16px;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 10px;
-                    font-size: 0.9375rem;
-                    color: #1f2937;
-                    transition: all 0.2s;
-                    background: #f9fafb;
-                }
-
-                .form-input-modal:focus {
-                    outline: none;
-                    border-color: var(--primary-color);
-                    background: white;
-                    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-                }
-
-                .form-input-modal:disabled {
-                    background: #e5e7eb;
-                    cursor: not-allowed;
-                    opacity: 0.6;
-                }
-
-                .form-select-modal {
-                    padding: 12px 16px;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 10px;
-                    font-size: 0.9375rem;
-                    color: #1f2937;
-                    background: #f9fafb;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-
-                .form-select-modal:focus {
-                    outline: none;
-                    border-color: var(--primary-color);
-                    background: white;
-                    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-                }
-
-                .form-hint {
-                    font-size: 0.75rem;
-                    color: #6b7280;
-                    margin-top: -2px;
-                }
-
-                .preview-card {
-                    margin-top: 24px;
-                    background: var(--primary-soft);
-                    border: 2px solid var(--primary-border);
-                    border-radius: 12px;
-                    padding: 16px;
-                }
-
-                .preview-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    color: var(--primary-color);
-                    font-weight: 600;
-                    font-size: 0.875rem;
-                    margin-bottom: 12px;
-                }
-
-                .preview-content {
-                    display: grid;
-                    gap: 8px;
-                }
-
-                .preview-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 8px 12px;
-                    background: white;
-                    border-radius: 8px;
-                }
-
-                .preview-label {
-                    font-size: 0.8125rem;
-                    color: #6b7280;
-                    font-weight: 500;
-                }
-
-                .preview-value {
-                    font-size: 0.875rem;
-                    color: #1f2937;
-                    font-weight: 600;
-                    font-family: monospace;
-                }
-
-                .modal-footer {
-                    display: flex;
-                    gap: 12px;
-                    padding: 20px 24px;
-                    border-top: 1px solid #e5e7eb;
-                    background: #f9fafb;
-                }
-
-                .btn-modal {
-                    flex: 1;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    padding: 12px 24px;
-                    border: none;
-                    border-radius: 10px;
-                    min-height: 44px;
-                    font-weight: 600;
-                    font-size: 0.9375rem;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-
-                .btn-cancel {
-                    background: white;
-                    color: #6b7280;
-                    border: 2px solid #e5e7eb;
-                }
-
-                .btn-cancel:hover:not(:disabled) {
-                    background: #f3f4f6;
-                    border-color: #d1d5db;
-                }
-
-                .btn-save {
-                    background: var(--primary-color);
-                    color: white;
-                    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
-                }
-
-                .btn-save:hover:not(:disabled) {
-                    background: var(--primary-color-hover);
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 12px -1px rgba(37, 99, 235, 0.35);
-                }
-
-                .btn-save:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                    transform: none;
-                }
-
-                .spin {
-                    animation: spin 1s linear infinite;
-                }
-
-                @keyframes spin {
-                    from {
-                        transform: rotate(0deg);
-                    }
-                    to {
-                        transform: rotate(360deg);
-                    }
-                }
-
-                @media (max-width: 640px) {
-                    .modal-content {
-                        max-width: 100%;
-                        margin: 0;
-                        border-radius: 16px 16px 0 0;
-                        max-height: 95vh;
-                    }
-
-                    .modal-overlay {
-                        align-items: flex-end;
-                        padding: 0;
-                    }
-
-                    .modal-header {
-                        padding: 20px;
-                    }
-
-                    .modal-body {
-                        padding: 20px;
-                    }
-
-                    .modal-footer {
-                        flex-direction: column-reverse;
-                        padding: 16px 20px;
-                    }
-
-                    .btn-modal {
-                        width: 100%;
-                    }
-                }
-                }
             `}</style>
 
             {/* CustomAlert for confirmations */}

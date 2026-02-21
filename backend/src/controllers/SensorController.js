@@ -29,16 +29,37 @@ const SensorController = {
         try {
             const { limit, sensorId, sensorType } = req.query;
 
-            let data;
-            if (sensorId && sensorId !== 'all') {
-                data = await DataService.getDataBySensorId(sensorId, limit || 100);
-            } else if (sensorType && sensorType !== 'all') {
-                data = await DataService.getDataBySensorType(sensorType, limit || 100);
-            } else {
-                data = await DataService.getAllData(limit || 100);
-            }
+            // Admin sees ALL data; regular users see only their own
+            const userId = req.user?.role === 'ADMIN' ? null : (req.user?.id || null);
 
-            res.json(data);
+            const prisma = require('../config/prisma');
+
+            // Build base where clause
+            const baseWhere = userId ? { userId } : {};
+
+            let whereClause = { ...baseWhere };
+            if (sensorId && sensorId !== 'all') whereClause.sensorId = sensorId;
+            if (sensorType && sensorType !== 'all') whereClause.sensorType = sensorType;
+
+            const data = await prisma.sensorData.findMany({
+                where: whereClause,
+                orderBy: { timestamp: 'desc' },
+                take: parseInt(limit) || 500,
+                include: {
+                    user: {
+                        select: { username: true }
+                    }
+                }
+            });
+
+            // Flatten user.username into response
+            const normalized = data.map(row => ({
+                ...row,
+                userName: row.user?.username || null,
+                user: undefined
+            }));
+
+            res.json(normalized);
         } catch (error) {
             console.error('Error in getAll:', error);
             res.status(500).json({ error: error.message });
@@ -77,8 +98,10 @@ const SensorController = {
 
     async deleteAll(req, res) {
         try {
-            await DataService.deleteAllData();
-            res.json({ message: 'All data deleted successfully' });
+            // Users can only delete their own data; admin deletes all
+            const userId = req.user?.role === 'ADMIN' ? null : (req.user?.id || null);
+            await DataService.deleteAllData(userId);
+            res.json({ message: 'Data deleted successfully' });
         } catch (error) {
             console.error('Error in deleteAll:', error);
             res.status(500).json({ error: error.message });
@@ -96,7 +119,10 @@ const SensorController = {
                 });
             }
 
-            console.log('deleteByFilter called with:', { sensorTypes, sensorIds });
+            // Users can only delete their own data; admin deletes across all users
+            const userId = req.user?.role === 'ADMIN' ? null : (req.user?.id || null);
+
+            console.log('deleteByFilter called with:', { sensorTypes, sensorIds, userId });
 
             // Build where clause for Prisma
             const whereClause = {};
@@ -121,7 +147,7 @@ const SensorController = {
                 whereClause.OR = orConditions;
             }
 
-            const result = await DataService.deleteByFilter(whereClause);
+            const result = await DataService.deleteByFilter(whereClause, userId);
 
             res.json({
                 success: true,

@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
 import SensorConfigPanel from '../../components/admin/SensorConfigPanel';
+import BottomSheetModal from '../../components/shared/BottomSheetModal';
 import {
     Users, Plus, Trash2, Edit2, Power, Clock, AlertCircle,
-    Loader2, ChevronDown, ChevronUp, X, Settings, Thermometer
+    Loader2, ChevronDown, ChevronUp, Settings, Thermometer
 } from 'lucide-react';
 import CustomAlert from '../../components/shared/CustomAlert';
 import PropTypes from 'prop-types';
@@ -117,53 +118,6 @@ UserCard.propTypes = {
     onToggleStatus: PropTypes.func.isRequired
 };
 
-// Modal Component
-function Modal({ isOpen, onClose, title, children, headerColor = 'bg-blue-500' }) {
-    if (!isOpen) return null;
-
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            style={{ animation: 'fadeIn 0.2s ease-out' }}
-        >
-            <div className="absolute inset-0" onClick={onClose}></div>
-            <div
-                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
-                style={{ animation: 'slideUp 0.3s ease-out' }}
-            >
-                <div className={`flex items-center justify-between p-5 ${headerColor}`}>
-                    <h2 className="text-lg font-bold text-white">{title}</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 overflow-y-auto flex-1">{children}</div>
-            </div>
-
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes slideUp {
-                    from { transform: translateY(20px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-            `}</style>
-        </div>
-    );
-}
-
-Modal.propTypes = {
-    isOpen: PropTypes.bool.isRequired,
-    onClose: PropTypes.func.isRequired,
-    title: PropTypes.string.isRequired,
-    children: PropTypes.node.isRequired,
-    headerColor: PropTypes.string
-};
 
 // Main Admin Dashboard Component
 export default function AdminDashboard() {
@@ -528,7 +482,7 @@ export default function AdminDashboard() {
                 </section>
 
                 {/* Create User Modal */}
-                <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New User" headerColor="bg-purple-500">
+                <BottomSheetModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New User" headerColor="bg-purple-500">
                     <form onSubmit={handleCreateUser} className="space-y-4">
                         {formError && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -594,10 +548,10 @@ export default function AdminDashboard() {
                             </button>
                         </div>
                     </form>
-                </Modal>
+                </BottomSheetModal>
 
                 {/* Edit User Modal */}
-                <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit User" headerColor="bg-blue-500">
+                <BottomSheetModal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit User" headerColor="bg-blue-500">
                     <form onSubmit={handleEditUser} className="space-y-4">
                         {formError && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -663,10 +617,10 @@ export default function AdminDashboard() {
                             </button>
                         </div>
                     </form>
-                </Modal>
+                </BottomSheetModal>
 
                 {/* Delete Confirmation Modal */}
-                <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Confirm Delete" headerColor="bg-red-500">
+                <BottomSheetModal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Confirm Delete" headerColor="bg-red-500">
                     <div className="space-y-4">
                         <p className="text-gray-700">
                             Are you sure you want to delete user <strong>{selectedUser?.username}</strong>?
@@ -697,10 +651,10 @@ export default function AdminDashboard() {
                             </button>
                         </div>
                     </div>
-                </Modal>
+                </BottomSheetModal>
 
                 {/* Create Interval Modal */}
-                <Modal isOpen={showIntervalModal} onClose={() => setShowIntervalModal(false)} title="Create Global Interval" headerColor="bg-blue-500">
+                <BottomSheetModal isOpen={showIntervalModal} onClose={() => setShowIntervalModal(false)} title="Create Global Interval" headerColor="bg-blue-500">
                     <form onSubmit={handleCreateInterval} className="space-y-4">
                         {formError && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -785,7 +739,7 @@ export default function AdminDashboard() {
                             </button>
                         </div>
                     </form>
-                </Modal>
+                </BottomSheetModal>
             </div>
 
             {/* CustomAlert for confirmations */}

@@ -4,7 +4,7 @@ import userService from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 import PropTypes from 'prop-types';
 
-const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging }) => {
+const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging, logCount = 0 }) => {
     const [interval, setInterval] = useState('');
     const [intervals, setIntervals] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -141,10 +141,15 @@ const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging }) => {
                 </div>
 
                 {isLogging && (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-green-700 font-medium">
-                            Merekam: {intervals.find(i => i.value === interval)?.label || interval + 's'}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 p-3 bg-green-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+                            <span className="text-sm text-green-700 font-medium">
+                                Merekam: {intervals.find(i => i.value === interval)?.label || interval + 's'}
+                            </span>
+                        </div>
+                        <span className="text-xs text-green-600 pl-4 sm:pl-0">
+                            Total siklus: <span className="font-bold">{logCount}</span>
                         </span>
                     </div>
                 )}
@@ -156,7 +161,8 @@ const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging }) => {
 DataLogger.propTypes = {
     onIntervalChange: PropTypes.func.isRequired,
     isLogging: PropTypes.bool.isRequired,
-    onToggleLogging: PropTypes.func.isRequired
+    onToggleLogging: PropTypes.func.isRequired,
+    logCount: PropTypes.number
 };
 
 export default DataLogger;

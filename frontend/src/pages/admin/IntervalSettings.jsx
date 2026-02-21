@@ -1,37 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import userService from '../../services/userService';
-import { Clock, Plus, Trash2, Loader2, X, AlertCircle } from 'lucide-react';
+import { Clock, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import CustomAlert from '../../components/shared/CustomAlert';
 import LoggerMonitor from '../../components/admin/LoggerMonitor';
+import BottomSheetModal from '../../components/shared/BottomSheetModal';
 import PropTypes from 'prop-types';
 
-// Modal
-function Modal({ isOpen, onClose, title, children, headerColor = 'bg-blue-500' }) {
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="absolute inset-0" onClick={onClose}></div>
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
-                <div className={`flex items-center justify-between p-5 ${headerColor}`}>
-                    <h2 className="text-lg font-bold text-white">{title}</h2>
-                    <button onClick={onClose} className="p-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 overflow-y-auto flex-1">{children}</div>
-            </div>
-        </div>
-    );
-}
-
-Modal.propTypes = {
-    isOpen: PropTypes.bool.isRequired,
-    onClose: PropTypes.func.isRequired,
-    title: PropTypes.string.isRequired,
-    children: PropTypes.node.isRequired,
-    headerColor: PropTypes.string
-};
 
 export default function IntervalSettings() {
     const [intervals, setIntervals] = useState([]);
@@ -211,7 +185,7 @@ export default function IntervalSettings() {
             </div>
 
             {/* Modal Buat Interval */}
-            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Buat Interval Baru" headerColor="bg-blue-500">
+            <BottomSheetModal isOpen={showModal} onClose={() => setShowModal(false)} title="Buat Interval Baru" headerColor="bg-blue-500">
                 <form onSubmit={handleCreate} className="space-y-4">
                     {formError && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{formError}</div>}
 
@@ -256,7 +230,7 @@ export default function IntervalSettings() {
                         </button>
                     </div>
                 </form>
-            </Modal>
+            </BottomSheetModal>
 
             <CustomAlert
                 isOpen={confirmConfig.isOpen}
