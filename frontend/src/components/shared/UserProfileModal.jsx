@@ -156,11 +156,11 @@ export default function UserProfileModal({ isOpen, onClose }) {
             onClick={handleClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto mx-2"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="bg-blue-500 p-6 flex items-center justify-between">
+                <div className="bg-blue-500 p-4 sm:p-6 flex items-center justify-between">
                     <div className="flex items-center gap-3 text-white">
                         <div className="p-2 bg-white/20 rounded-lg">
                             <User size={24} />
@@ -179,7 +179,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 </div>
 
                 {/* Content */}
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                     {/* Message */}
                     {message.text && (
                         <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${message.type === 'success'
@@ -198,7 +198,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     {/* User Info */}
                     <div className="space-y-4 mb-6">
                         {/* Username - Editable for all users */}
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl">
                             <div className="p-2 bg-blue-100 rounded-lg shrink-0">
                                 <User size={20} className="text-blue-600" />
                             </div>
@@ -240,8 +240,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-gray-900 font-semibold">{user?.username || '-'}</p>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <p className="text-gray-900 font-semibold truncate">{user?.username || '-'}</p>
                                         <button
                                             onClick={() => setIsEditingUsername(true)}
                                             className="p-1 hover:bg-blue-100 rounded-md transition-colors text-gray-400 hover:text-blue-600"
@@ -255,7 +255,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                         </div>
 
                         {/* Email */}
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl">
                             <div className="p-2 bg-green-100 rounded-lg shrink-0">
                                 <Mail size={20} className="text-green-600" />
                             </div>
@@ -297,8 +297,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-gray-900 font-semibold">{user?.email || '-'}</p>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <p className="text-gray-900 font-semibold text-sm break-all">{user?.email || '-'}</p>
                                         {/* Only default admin can edit email */}
                                         {isDefaultAdmin() && (
                                             <button
@@ -315,7 +315,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                         </div>
 
                         {/* Role */}
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl">
                             <div className="p-2 bg-purple-100 rounded-lg shrink-0">
                                 <Shield size={20} className="text-purple-600" />
                             </div>

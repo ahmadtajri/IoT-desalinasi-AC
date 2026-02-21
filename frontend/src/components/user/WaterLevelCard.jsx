@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Power, Droplets, Settings, X, ToggleLeft, ToggleRight, Save } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import valveService from '../../services/valveService';
@@ -180,8 +181,8 @@ const WaterLevelCard = ({ value, pumpStatus = false, valveStatus = null }) => {
                 </div>
             </div>
 
-            {/* Settings Modal */}
-            {showSettings && (
+            {/* Settings Modal - Rendered via Portal to escape overflow-hidden */}
+            {showSettings && createPortal(
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                     onClick={() => setShowSettings(false)}
@@ -411,7 +412,8 @@ const WaterLevelCard = ({ value, pumpStatus = false, valveStatus = null }) => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
