@@ -1,5 +1,6 @@
 // Schema Management Component - Admin can upload/manage SVG schemas
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import schemaService from '../../services/schemaService';
 import {
@@ -76,7 +77,6 @@ const SchemaManagement = () => {
             const content = await schemaService.readSVGFile(file);
             setSelectedFile(file);
             setPreviewSVG(content);
-            setShowPreview(true);
             setError('');
         } catch (err) {
             setError('Failed to read file');
@@ -488,9 +488,9 @@ const SchemaManagement = () => {
             </div>
 
             {/* Edit Modal */}
-            {showEditModal && (
+            {showEditModal && createPortal(
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
                     onClick={() => setShowEditModal(false)}
                     style={{ animation: 'fadeIn 0.2s ease-out' }}
                 >
@@ -576,13 +576,14 @@ const SchemaManagement = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Preview Modal */}
-            {showPreview && (
+            {showPreview && createPortal(
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
                     onClick={() => setShowPreview(false)}
                     style={{ animation: 'fadeIn 0.2s ease-out' }}
                 >
@@ -605,29 +606,6 @@ const SchemaManagement = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-2">
-                                {previewingSchema && (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                openEditModal(previewingSchema);
-                                                setShowPreview(false);
-                                            }}
-                                            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors"
-                                            title="Edit Schema"
-                                        >
-                                            <Edit2 size={14} className="sm:w-4 sm:h-4" />
-                                            <span className="hidden xs:inline">Edit</span>
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(previewingSchema)}
-                                            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors"
-                                            title="Delete Schema"
-                                        >
-                                            <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                                            <span className="hidden xs:inline">Hapus</span>
-                                        </button>
-                                    </>
-                                )}
                                 <button
                                     onClick={() => { setShowPreview(false); setPreviewingSchema(null); }}
                                     className="p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
@@ -647,19 +625,25 @@ const SchemaManagement = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* CustomAlert for confirmations */}
-            <CustomAlert
-                isOpen={confirmConfig.isOpen}
-                onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
-                title={confirmConfig.title}
-                message={confirmConfig.message}
-                type={confirmConfig.type}
-                isConfirm={true}
-                onConfirm={confirmConfig.onConfirm}
-            />
+            {confirmConfig.isOpen && createPortal(
+                <div className="relative z-[200]">
+                    <CustomAlert
+                        isOpen={confirmConfig.isOpen}
+                        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+                        title={confirmConfig.title}
+                        message={confirmConfig.message}
+                        type={confirmConfig.type}
+                        isConfirm={true}
+                        onConfirm={confirmConfig.onConfirm}
+                    />
+                </div>,
+                document.body
+            )}
 
             {/* CSS Animations */}
             <style>{`

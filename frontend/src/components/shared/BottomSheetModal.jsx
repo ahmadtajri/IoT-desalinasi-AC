@@ -82,7 +82,7 @@ export default function BottomSheetModal({
                 <div
                     className={`
                         relative bg-white rounded-2xl shadow-2xl
-                        w-full max-w-md max-h-[90vh]
+                        w-full max-w-2xl max-h-[90vh]
                         overflow-hidden flex flex-col
                         transition-transform duration-300
                         ${animated ? 'scale-100' : 'scale-95'}

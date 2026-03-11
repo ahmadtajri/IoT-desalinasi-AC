@@ -52,7 +52,7 @@ class UserLogger {
         };
     }
 
-    start() {
+    async start() {
         if (this.isLogging) {
             return { success: false, message: 'Logger sudah berjalan untuk user ini' };
         }
@@ -69,11 +69,47 @@ class UserLogger {
             };
         }
 
+        // Check if there are any active sensors in the MQTT cache
+        const ESP32Controller = require('../controllers/ESP32Controller');
+        const cache = ESP32Controller.getCache();
+        const sensorTypeMap = await getSensorTypeMap();
+
+        let hasActiveSensor = false;
+
+        if (this.enabledSensorTypes.humidity) {
+            const ids = getSensorIdsByType(sensorTypeMap, 'humidity');
+            for (const id of ids) {
+                const data = cache.humidity?.[id];
+                if (data && data.status === 'active') { hasActiveSensor = true; break; }
+            }
+        }
+
+        if (!hasActiveSensor && this.enabledSensorTypes.airTemperature) {
+            const ids = getSensorIdsByType(sensorTypeMap, 'air_temperature');
+            for (const id of ids) {
+                const data = cache.temperature?.[id];
+                if (data && data.status === 'active') { hasActiveSensor = true; break; }
+            }
+        }
+
+        if (!hasActiveSensor && this.enabledSensorTypes.waterTemperature) {
+            const ids = getSensorIdsByType(sensorTypeMap, 'water_temperature');
+            for (const id of ids) {
+                const data = cache.temperature?.[id];
+                if (data && data.status === 'active') { hasActiveSensor = true; break; }
+            }
+        }
+
+        if (!hasActiveSensor) {
+            return {
+                success: false,
+                message: 'Tidak bisa memulai Data Logger: Tidak ada sensor yang aktif saat ini. Pastikan ESP32 terhubung dan mengirim data.'
+            };
+        }
+
         this.isLogging = true;
         this.logCount = 0;
         this.startTime = Date.now();
-        console.log(`[Logger:${this.username}] Started with interval ${this.interval}ms`);
-        console.log(`[Logger:${this.username}] Enabled: humidity=${this.enabledSensorTypes.humidity}, airTemp=${this.enabledSensorTypes.airTemperature}, waterTemp=${this.enabledSensorTypes.waterTemperature}`);
 
         this._scheduleNextCycle();
         return { success: true, message: 'Logger started successfully' };
@@ -284,14 +320,13 @@ class UserLoggerManager {
     /**
      * Start logger for a specific user
      */
-    startForUser(userId, username, intervalMs, sensorConfig) {
+    async startForUser(userId, username, intervalMs, sensorConfig) {
         const logger = this._getOrCreate(userId, username);
 
         if (intervalMs) logger.setIntervalTime(intervalMs);
         if (sensorConfig) logger.setSensorConfig(sensorConfig);
 
-        const result = logger.start();
-        console.log(`[LoggerManager] Active loggers: ${this.getActiveCount()}/${this.loggers.size}`);
+        const result = await logger.start();
         return result;
     }
 

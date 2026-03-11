@@ -39,11 +39,9 @@ const DailyLogManagement = () => {
         try {
             setLoading(true);
             setError('');
-            console.log('📄 Fetching daily logs...');
             const response = await dailyLogService.getAll();
             if (response.success) {
                 setLogs(response.data);
-                console.log('✅ Daily logs loaded:', response.data.length);
             } else {
                 setError(response.message || 'Gagal mengambil data log harian');
             }

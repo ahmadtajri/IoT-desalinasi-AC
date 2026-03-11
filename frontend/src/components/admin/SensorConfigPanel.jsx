@@ -435,113 +435,118 @@ const SensorConfigPanel = ({ onConfigChange }) => {
                 title="Konfigurasi Sensor Baru"
                 headerColor="bg-blue-600"
             >
-                <div className="space-y-4">
-                    {/* Sensor ID */}
-                    <div className="flex flex-col gap-1">
-                        <label className="text-sm font-semibold text-gray-700">
-                            Sensor ID <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
-                            value={newSensor.sensorId}
-                            onChange={(e) => setNewSensor({ ...newSensor, sensorId: e.target.value.toUpperCase() })}
-                            placeholder="Contoh: T7, RH8, WL2"
-                            disabled={newSensor.sensorId && discoveredSensors.find(s => s.sensorId === newSensor.sensorId)}
-                        />
-                        <span className="text-xs text-gray-500">ID unik untuk mengidentifikasi sensor</span>
-                    </div>
-
-                    {/* Nama Display */}
-                    <div className="flex flex-col gap-1">
-                        <label className="text-sm font-semibold text-gray-700">
-                            Nama Display <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                            value={newSensor.displayName}
-                            onChange={(e) => setNewSensor({ ...newSensor, displayName: e.target.value })}
-                            placeholder="Contoh: Suhu Kolam Utama"
-                        />
-                        <span className="text-xs text-gray-500">Nama yang akan ditampilkan pada dashboard</span>
-                    </div>
-
-                    {/* Kategori Sensor */}
-                    <div className="flex flex-col gap-1">
-                        <label className="text-sm font-semibold text-gray-700">
-                            Kategori Sensor <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
-                            value={newSensor.sensorType}
-                            onChange={(e) => {
-                                const type = e.target.value;
-                                const typeInfo = SENSOR_TYPE_INFO[type];
-                                setNewSensor({ ...newSensor, sensorType: type, unit: typeInfo?.unit || '°C' });
-                            }}
-                        >
-                            <option value="air_temperature">🌡️ Suhu Udara</option>
-                            <option value="water_temperature">💧 Suhu Air</option>
-                            <option value="humidity">💦 Kelembapan</option>
-                            <option value="water_level">🌊 Level Air</option>
-                            <option value="water_weight">⚖️ Berat Air</option>
-                            <option value="uncategorized">❓ Belum Dikategorikan</option>
-                        </select>
-                        <span className="text-xs text-gray-500">Tentukan jenis pengukuran sensor</span>
-                    </div>
-
-                    {/* Unit Pengukuran */}
-                    <div className="flex flex-col gap-1">
-                        <label className="text-sm font-semibold text-gray-700">Unit Pengukuran</label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                            value={newSensor.unit}
-                            onChange={(e) => setNewSensor({ ...newSensor, unit: e.target.value })}
-                            placeholder="Contoh: °C, %, kg"
-                        />
-                        <span className="text-xs text-gray-500">Satuan yang digunakan untuk nilai sensor</span>
-                    </div>
-
-                    {/* Preview */}
-                    <div className="mt-2 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                        <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm mb-3">
-                            <AlertCircle size={16} />
-                            <span>Preview Konfigurasi</span>
+                <div className="flex flex-col md:flex-row gap-5">
+                    {/* Kiri: Form Pengaturan */}
+                    <div className="flex-1 space-y-4">
+                        {/* Sensor ID */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-gray-700">
+                                Sensor ID <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                value={newSensor.sensorId}
+                                onChange={(e) => setNewSensor({ ...newSensor, sensorId: e.target.value.toUpperCase() })}
+                                placeholder="Contoh: T7, RH8, WL2"
+                                disabled={newSensor.sensorId && discoveredSensors.find(s => s.sensorId === newSensor.sensorId)}
+                            />
+                            <span className="text-xs text-gray-500">ID unik untuk mengidentifikasi sensor</span>
                         </div>
-                        <div className="space-y-2">
-                            {[{ label: 'ID', value: newSensor.sensorId }, { label: 'Nama', value: newSensor.displayName }, { label: 'Kategori', value: SENSOR_TYPE_INFO[newSensor.sensorType]?.label }, { label: 'Unit', value: newSensor.unit }].map(({ label, value }) => (
-                                <div key={label} className="flex justify-between items-center px-3 py-2 bg-white rounded-lg">
-                                    <span className="text-xs text-gray-500 font-medium">{label}:</span>
-                                    <span className="text-sm font-semibold font-mono text-gray-800">{value || '-'}</span>
-                                </div>
-                            ))}
+
+                        {/* Nama Display */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-gray-700">
+                                Nama Display <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                                value={newSensor.displayName}
+                                onChange={(e) => setNewSensor({ ...newSensor, displayName: e.target.value })}
+                                placeholder="Contoh: Suhu Kolam Utama"
+                            />
+                            <span className="text-xs text-gray-500">Nama yang akan ditampilkan pada dashboard</span>
+                        </div>
+
+                        {/* Kategori Sensor */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-gray-700">
+                                Kategori Sensor <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
+                                value={newSensor.sensorType}
+                                onChange={(e) => {
+                                    const type = e.target.value;
+                                    const typeInfo = SENSOR_TYPE_INFO[type];
+                                    setNewSensor({ ...newSensor, sensorType: type, unit: typeInfo?.unit || '°C' });
+                                }}
+                            >
+                                <option value="air_temperature">🌡️ Suhu Udara</option>
+                                <option value="water_temperature">💧 Suhu Air</option>
+                                <option value="humidity">💦 Kelembapan</option>
+                                <option value="water_level">🌊 Level Air</option>
+                                <option value="water_weight">⚖️ Berat Air</option>
+                                <option value="uncategorized">❓ Belum Dikategorikan</option>
+                            </select>
+                            <span className="text-xs text-gray-500">Tentukan jenis pengukuran sensor</span>
+                        </div>
+
+                        {/* Unit Pengukuran */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-gray-700">Unit Pengukuran</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                                value={newSensor.unit}
+                                onChange={(e) => setNewSensor({ ...newSensor, unit: e.target.value })}
+                                placeholder="Contoh: °C, %, kg"
+                            />
+                            <span className="text-xs text-gray-500">Satuan yang digunakan untuk nilai sensor</span>
                         </div>
                     </div>
 
-                    {/* Tombol Aksi */}
-                    <div className="flex gap-3 pt-2">
-                        <button
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-600 font-semibold rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all"
-                            onClick={() => setShowAddForm(false)}
-                            disabled={saving}
-                        >
-                            <X size={16} />
-                            Batal
-                        </button>
-                        <button
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={handleAddSensor}
-                            disabled={saving || !newSensor.sensorId || !newSensor.displayName}
-                        >
-                            {saving ? (
-                                <><Loader2 size={16} className="animate-spin" />Menyimpan...</>
-                            ) : (
-                                <><Save size={16} />Simpan Konfigurasi</>
-                            )}
-                        </button>
+                    {/* Kanan: Preview Konfigurasi */}
+                    <div className="md:w-56 flex-shrink-0">
+                        <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl h-full">
+                            <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm mb-3">
+                                <AlertCircle size={16} />
+                                <span>Preview</span>
+                            </div>
+                            <div className="space-y-2">
+                                {[{ label: 'ID', value: newSensor.sensorId }, { label: 'Nama', value: newSensor.displayName }, { label: 'Kategori', value: SENSOR_TYPE_INFO[newSensor.sensorType]?.label }, { label: 'Unit', value: newSensor.unit }].map(({ label, value }) => (
+                                    <div key={label} className="flex flex-col px-3 py-2 bg-white rounded-lg">
+                                        <span className="text-xs text-gray-500 font-medium">{label}</span>
+                                        <span className="text-sm font-semibold font-mono text-gray-800 truncate">{value || '-'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                {/* Tombol Aksi */}
+                <div className="flex gap-3 pt-4 mt-4 border-t border-gray-100">
+                    <button
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-600 font-semibold rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all"
+                        onClick={() => setShowAddForm(false)}
+                        disabled={saving}
+                    >
+                        <X size={16} />
+                        Batal
+                    </button>
+                    <button
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleAddSensor}
+                        disabled={saving || !newSensor.sensorId || !newSensor.displayName}
+                    >
+                        {saving ? (
+                            <><Loader2 size={16} className="animate-spin" />Menyimpan...</>
+                        ) : (
+                            <><Save size={16} />Simpan Konfigurasi</>
+                        )}
+                    </button>
                 </div>
             </BottomSheetModal>
 

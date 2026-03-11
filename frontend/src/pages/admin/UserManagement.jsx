@@ -128,11 +128,9 @@ export default function UserManagement() {
         try {
             setLoading(true);
             setError('');
-            console.log('📋 Fetching users...');
             const response = await userService.getAllUsers();
             if (response.success) {
                 setUsers(response.data);
-                console.log('✅ Users loaded:', response.data.length);
             } else {
                 setError(response.message || 'Gagal memuat data pengguna');
             }

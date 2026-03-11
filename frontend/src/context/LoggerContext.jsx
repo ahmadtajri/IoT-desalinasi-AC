@@ -180,8 +180,6 @@ export const LoggerProvider = ({ children }) => {
                     };
                 }
 
-                console.log('[LoggerContext] Starting logger with config:', config, 'interval:', logInterval);
-
                 // Start logger with interval included - backend handles per-user
                 const result = await sensorService.startLogger(config, logInterval);
 
@@ -215,11 +213,9 @@ export const LoggerProvider = ({ children }) => {
         try {
             // Only update if the interval actually changed
             if (logInterval === newInterval) {
-                console.log(`[LoggerContext] Interval unchanged (${newInterval}ms), skipping update.`);
                 return;
             }
 
-            console.log(`[LoggerContext] Changing interval from ${logInterval}ms to ${newInterval}ms`);
             setLogInterval(newInterval);
 
             // Only send to backend if logger is running

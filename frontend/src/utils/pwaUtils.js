@@ -19,7 +19,6 @@ export const getDeferredPrompt = () => {
 export const triggerInstallPrompt = async () => {
   const prompt = getDeferredPrompt();
   if (!prompt) {
-    console.log('[PWA] Install prompt not available');
     return false;
   }
 
@@ -27,10 +26,8 @@ export const triggerInstallPrompt = async () => {
     prompt.prompt();
     const result = await prompt.userChoice;
     if (result.outcome === 'accepted') {
-      console.log('[PWA] User accepted install prompt');
       return true;
     } else {
-      console.log('[PWA] User dismissed install prompt');
       return false;
     }
   } catch (error) {
@@ -90,7 +87,6 @@ export const clearAppCache = async () => {
       await caches.delete(cacheName);
     }
 
-    console.log('[PWA] Cache cleared successfully');
     return true;
   } catch (error) {
     console.error('[PWA] Failed to clear cache:', error);
@@ -148,27 +144,21 @@ export const subscribeToOnlineStatus = (callback) => {
  * Initialize PWA features
  */
 export const initPWA = () => {
-  console.log('[PWA] Initializing PWA features');
-
   // Check if running as PWA
   if (isAppInstalled()) {
-    console.log('[PWA] App is running in standalone mode (installed PWA)');
     document.body.classList.add('pwa-installed');
   }
 
-  // Log offline status
+  // Handle offline status
   if (isOffline()) {
-    console.log('[PWA] App is running in offline mode');
     document.body.classList.add('offline-mode');
   }
 
   // Listen for online/offline changes
   subscribeToOnlineStatus((isOnline) => {
     if (isOnline) {
-      console.log('[PWA] App is back online');
       document.body.classList.remove('offline-mode');
     } else {
-      console.log('[PWA] App is now offline');
       document.body.classList.add('offline-mode');
     }
   });

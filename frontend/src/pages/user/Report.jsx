@@ -234,8 +234,6 @@ const Report = () => {
             }
         }
 
-        console.log('[Report] Toggle logger with config:', sensorConfig);
-
         // Call toggleLogging and handle the result
         const result = await toggleLogging(sensorConfig);
 

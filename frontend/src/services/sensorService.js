@@ -101,7 +101,6 @@ const sensorService = {
     exportToCSV(data, filename = 'sensor_data.csv') {
         // Validate data
         if (!data || !Array.isArray(data) || data.length === 0) {
-            console.warn('exportToCSV: No data to export');
             return false;
         }
 

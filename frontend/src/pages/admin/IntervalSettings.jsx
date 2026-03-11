@@ -24,11 +24,9 @@ export default function IntervalSettings() {
         try {
             setLoading(true);
             setError('');
-            console.log('⏰ Fetching intervals...');
             const response = await userService.getGlobalIntervals();
             if (response.success) {
                 setIntervals(response.data);
-                console.log('✅ Intervals loaded:', response.data.length);
             } else {
                 setError(response.message || 'Gagal memuat data interval');
             }

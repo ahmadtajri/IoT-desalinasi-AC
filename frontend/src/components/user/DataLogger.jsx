@@ -35,11 +35,8 @@ const DataLogger = ({ onIntervalChange, isLogging, onToggleLogging, logCount = 0
                         // Only call onIntervalChange if this is a NEW value
                         const newIntervalMs = parseInt(active.value) * 1000;
                         if (previousIntervalRef.current !== newIntervalMs) {
-                            console.log(`[DataLogger] Setting interval to ${newIntervalMs}ms (from ${previousIntervalRef.current}ms)`);
                             onIntervalChange(newIntervalMs);
                             previousIntervalRef.current = newIntervalMs;
-                        } else {
-                            console.log(`[DataLogger] Interval unchanged (${newIntervalMs}ms), skipping onIntervalChange call`);
                         }
                     }
                 }

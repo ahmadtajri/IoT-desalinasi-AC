@@ -25,7 +25,7 @@ const LoggerController = {
     /**
      * Start logger for the authenticated user
      */
-    start: (req, res) => {
+    start: async (req, res) => {
         const userId = req.user?.id;
         const username = req.user?.username;
         if (!userId) {
@@ -45,21 +45,26 @@ const LoggerController = {
         // Use interval from request body, or user's active interval from DB, or default
         const intervalMs = interval || null;
 
-        const result = LoggerManager.startForUser(userId, username, intervalMs, sensorConfig);
+        try {
+            const result = await LoggerManager.startForUser(userId, username, intervalMs, sensorConfig);
 
-        if (result && !result.success) {
-            return res.status(400).json({
-                success: false,
-                error: result.message,
+            if (result && !result.success) {
+                return res.status(400).json({
+                    success: false,
+                    error: result.message,
+                    status: LoggerManager.getStatusForUser(userId)
+                });
+            }
+
+            res.json({
+                success: true,
+                message: `Logger started untuk ${username}`,
                 status: LoggerManager.getStatusForUser(userId)
             });
+        } catch (error) {
+            console.error('[LoggerController] Error starting logger:', error);
+            res.status(500).json({ success: false, error: 'Gagal memulai Data Logger' });
         }
-
-        res.json({
-            success: true,
-            message: `Logger started untuk ${username}`,
-            status: LoggerManager.getStatusForUser(userId)
-        });
     },
 
     /**

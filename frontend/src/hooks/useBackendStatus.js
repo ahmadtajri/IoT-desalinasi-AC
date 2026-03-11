@@ -31,7 +31,6 @@ const useBackendStatus = (checkInterval = 30000) => {
             }
         } catch (error) {
             // If error (network error, timeout, etc), backend is offline
-            console.log('Backend status check failed:', error.message);
             setIsOnline(false);
             setLastChecked(new Date());
         } finally {

@@ -120,13 +120,7 @@ function App() {
         initPWA();
 
         // Check backend connection
-        autoCheckBackend().then(result => {
-            if (result.status === 'online') {
-                console.log('✅ Backend is ready:', result.data?.message);
-            } else {
-                console.warn('⚠️ Backend check failed:', result.message);
-            }
-        });
+        autoCheckBackend();
     }, []);
 
     return (

@@ -8,11 +8,9 @@ import api from '../services/api';
 
 export const checkBackendConnection = async () => {
     try {
-        console.log('🔍 Checking backend connection at:', api.defaults.baseURL);
         const response = await api.get('/', { timeout: 5000 });
         
         if (response.data) {
-            console.log('✅ Backend is running!', response.data);
             return {
                 status: 'online',
                 message: 'Backend terhubung',
@@ -49,8 +47,6 @@ export const autoCheckBackend = async () => {
     const result = await checkBackendConnection();
     
     if (result.status !== 'online') {
-        console.warn('⚠️ BACKEND WARNING:', result.message);
-        
         // Show a user-friendly notification
         if (typeof window !== 'undefined' && window.localStorage) {
             const lastWarning = localStorage.getItem('backend_warning_time');
