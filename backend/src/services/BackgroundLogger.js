@@ -198,10 +198,11 @@ class UserLogger {
                 for (const sensorId of humiditySensors) {
                     const cachedData = cache.humidity?.[sensorId];
                     if (cachedData && cachedData.value !== null && cachedData.value !== undefined) {
+                        const isActive = cachedData.status === 'active';
                         await DataService.createData({
                             sensor_id: sensorId,
                             sensor_type: 'humidity',
-                            value: parseFloat(cachedData.value.toFixed(2)),
+                            value: isActive ? parseFloat(cachedData.value.toFixed(2)) : 0,
                             unit: '%',
                             status: cachedData.status || 'active',
                             interval: intervalSeconds,
@@ -217,10 +218,11 @@ class UserLogger {
                 for (const sensorId of airTempSensors) {
                     const cachedData = cache.temperature?.[sensorId];
                     if (cachedData && cachedData.value !== null && cachedData.value !== undefined) {
+                        const isActive = cachedData.status === 'active';
                         await DataService.createData({
                             sensor_id: sensorId,
                             sensor_type: 'air_temperature',
-                            value: parseFloat(cachedData.value.toFixed(2)),
+                            value: isActive ? parseFloat(cachedData.value.toFixed(2)) : 0,
                             unit: '°C',
                             status: cachedData.status || 'active',
                             interval: intervalSeconds,
@@ -236,10 +238,11 @@ class UserLogger {
                 for (const sensorId of waterTempSensors) {
                     const cachedData = cache.temperature?.[sensorId];
                     if (cachedData && cachedData.value !== null && cachedData.value !== undefined) {
+                        const isActive = cachedData.status === 'active';
                         await DataService.createData({
                             sensor_id: sensorId,
                             sensor_type: 'water_temperature',
-                            value: parseFloat(cachedData.value.toFixed(2)),
+                            value: isActive ? parseFloat(cachedData.value.toFixed(2)) : 0,
                             unit: '°C',
                             status: cachedData.status || 'active',
                             interval: intervalSeconds,
